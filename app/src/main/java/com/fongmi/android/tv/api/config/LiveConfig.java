@@ -1,6 +1,5 @@
 package com.fongmi.android.tv.api.config;
 
-
 import android.net.Uri;
 import android.text.TextUtils;
 
@@ -122,20 +121,10 @@ public class LiveConfig {
 
     private void loadConfig(Callback callback) {
         try {
-            OkHttp.cancel("live");
-            String configUrl = config.getUrl();
-            if (configUrl.equals(Constants.BUILTIN_PLACEHOLDER)) {
-                configUrl = Constants.BUILTIN_URL; // 替换占位符为真实地址
-            }
-            parseConfig(Decoder.getJson(UrlUtil.convert(configUrl)), callback);
+            parseConfig(Decoder.getJson(UrlUtil.convert(config.getUrl())), callback);
         } catch (Throwable e) {
-            if (TextUtils.isEmpty(config.getUrl())) {
-                // 回退到内置源
-                config = Config.find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 1);
-                App.post(() -> callback.error(""));
-            } else {
-                App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
-            }
+            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
+            else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
             e.printStackTrace();
         }
     }

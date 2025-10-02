@@ -21,7 +21,6 @@ import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Json;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.orhanobut.logger.Logger;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -88,7 +87,7 @@ public class VodConfig {
         this.sites = new ArrayList<>();
         this.flags = new ArrayList<>();
         this.parses = new ArrayList<>();
-        this.loadLive = true;
+        this.loadLive = false;
         return this;
     }
 
@@ -120,33 +119,11 @@ public class VodConfig {
 
     private void loadConfig(Callback callback) {
         try {
-            // 1. 防御性检查Config对象
-            if (config == null) {
-                config = Config.vod(); // 重新初始化
-                Logger.e("Config is null, fallback to default!");
-            }
-
-            // 2. 安全获取URL
-            String loadUrl = config.getUrl();
-            if (TextUtils.isEmpty(loadUrl)) {
-                Logger.e("Config URL is empty, use built-in source!");
-                config = Config.find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 0);
-                loadConfig(callback);
-                return;
-            }
-
-            // 3. 安全判断占位符
-            if (Constants.BUILTIN_PLACEHOLDER.equals(loadUrl)) {
-                loadUrl = Constants.BUILTIN_URL;
-            }
-
-            // 4. 取消旧请求并加载新配置
-            OkHttp.cancel("vod");
-            JsonObject json = Json.parse(Decoder.getJson(UrlUtil.convert(loadUrl))).getAsJsonObject();
-            checkJson(json, callback);
-
+            checkJson(Json.parse(Decoder.getJson(UrlUtil.convert(config.getUrl()))).getAsJsonObject(), callback);
         } catch (Throwable e) {
-            // 异常处理逻辑...
+            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
+            else loadCache(callback, e);
+            e.printStackTrace();
         }
     }
 
