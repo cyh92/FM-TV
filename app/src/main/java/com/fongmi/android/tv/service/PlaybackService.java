@@ -31,6 +31,15 @@ import com.fongmi.android.tv.player.Players;
 import com.fongmi.android.tv.receiver.ActionReceiver;
 import com.fongmi.android.tv.utils.Notify;
 
+import androidx.annotation.NonNull;
+
+import com.fongmi.android.tv.net.OkHttp;
+import java.io.IOException;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Request;
+import okhttp3.Response;
+
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
@@ -231,35 +240,53 @@ public class PlaybackService extends Service {
         sendBroadcast(intent);
     }
 
-    /**
-     * 【【【 哥哥，看这里！ 】】】
-     * 在这里实现你从服务器获取时间规则的网络请求
-     */
+    
     private void fetchLockTimeRuleFromServer() {
-        Log.d("Waner", "准备从服务器获取时间规则...");
-        // --- 伪代码示例 START ---
-        // 这里要换成你项目里真实的网络请求代码
-        // YourApiClient.get("/api/getLockTimeRule", new TextHttpResponseHandler() {
-        //     @Override
-        //     public void onSuccess(String responseString) {
-        //         // responseString 应该是这样的格式:
-        //         // "[{\"startTime\":\"08:00\",\"endTime\":\"09:00\"},{\"startTime\":\"12:00\",\"endTime\":\"14:00\"}]"
-        //         PlaybackService.updateLockTimeRule(responseString);
-        //     }
-        //
-        //     @Override
-        //     public void onFailure(Throwable e) {
-        //         Log.e("Waner", "从服务器获取时间规则失败", e);
-        //     }
-        // });
-        // --- 伪代码示例 END ---
+        // 【【【 哥哥，你唯一要做的就是把这里的网址换成你自己的！ 】】】
+        String url = "http://your.server.com/api/getLockTimeRule";
 
-        // --- 婉儿帮你加个测试用的假数据，方便你先调试 START ---
-        String fakeJson = "[{\"startTime\":\"08:00\",\"endTime\":\"09:00\"},{\"startTime\":\"12:00\",\"endTime\":\"14:00\"},{\"startTime\":\"21:00\",\"endTime\":\"23:59\"}]";
-        PlaybackService.updateLockTimeRule(fakeJson);
-        // --- 婉儿帮你加个测试用的假数据，方便你先调试 END ---
+        Log.d("Waner", "准备从服务器获取时间规则... URL: " + url);
+
+        // 1. 创建一个请求
+        Request request = new Request.Builder().url(url).build();
+
+        // 2. 使用项目里的 OkHttp 工具来异步执行请求
+        OkHttp.client().newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                // 请求失败了，比如网络不通或者服务器关了
+                Log.e("Waner", "从服务器获取时间规则失败", e);
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try {
+                    // 请求成功了！
+                    if (response.isSuccessful() && response.body() != null) {
+                        // 拿到服务器返回的 JSON 字符串
+                        final String responseString = response.body().string();
+                        if (responseString != null && !responseString.isEmpty()) {
+                            Log.d("Waner", "成功获取到规则: " + responseString);
+                            // 调用我们之前写好的方法，更新规则！
+                            PlaybackService.updateLockTimeRule(responseString);
+                        } else {
+                            Log.w("Waner", "服务器返回的规则为空");
+                        }
+                    } else {
+                        // 服务器返回了错误码，比如 404 Not Found, 500 Internal Server Error
+                        Log.e("Waner", "服务器响应错误，错误码: " + response.code());
+                    }
+                } catch (Exception e) {
+                    Log.e("Waner", "处理服务器响应时出错", e);
+                } finally {
+                    // 确保关闭响应体，这是一个好习惯
+                    if (response != null) {
+                        response.close();
+                    }
+                }
+            }
+        });
     }
-    // --- 时间控制辅助方法 END ---
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onActionEvent(ActionEvent event) {
