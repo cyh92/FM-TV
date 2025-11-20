@@ -33,7 +33,7 @@ import com.fongmi.android.tv.utils.Notify;
 
 import androidx.annotation.NonNull;
 
-import com.fongmi.android.tv.net.OkHttp;
+import com.github.catvod.net.OkHttp;
 import java.io.IOException;
 import okhttp3.Call;
 import okhttp3.Callback;
