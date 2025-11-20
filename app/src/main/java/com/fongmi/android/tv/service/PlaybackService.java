@@ -304,11 +304,30 @@ public class PlaybackService extends Service {
     @Override
     @SuppressLint("ForegroundServiceType")
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (nonNull()) MediaButtonReceiver.handleIntent(player.getSession(), intent);
-        int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0;
-        ServiceCompat.startForeground(this, Notify.ID, buildNotification(), type);
+    // 门卫上班第一件事：检查时间！
+    if (checkIfInLockTime()) {
+        // 如果是休息时间...
+        Log.d("Waner", "检测到处于锁定时间，已拦截播放请求。"); // 在日志里打个招呼
+
+        // 【【【 温馨提示的核心 】】】
+        // 先用一个 Toast 弹出提示，这是最简单直接的方式！
+        // 我们先用它来验证逻辑对不对
+        android.widget.Toast.makeText(this, "现在是温馨休息时间哦~", android.widget.Toast.LENGTH_LONG).show();
+
+        // 把播放服务彻底关掉！
+        stop();
+
+        // 告诉系统，别再管我了，直接返回，后面的代码不执行了！
         return START_NOT_STICKY;
     }
+
+    // 如果不是休息时间，那就跟原来一样，正常放行~
+        if (nonNull()) MediaButtonReceiver.handleIntent(player.getSession(), intent);
+          int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0;
+          ServiceCompat.startForeground(this, Notify.ID, buildNotification(), type);
+        return START_NOT_STICKY;
+    }
+
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
