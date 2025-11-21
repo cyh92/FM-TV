@@ -12,8 +12,10 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.support.v4.media.MediaMetadataCompat;
 import android.util.Log;
+import android.widget.Toast; // 婉儿添加：为了能弹出提示
 
 import androidx.annotation.DrawableRes;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.core.app.NotificationCompat;
@@ -30,15 +32,7 @@ import com.fongmi.android.tv.event.ActionEvent;
 import com.fongmi.android.tv.player.Players;
 import com.fongmi.android.tv.receiver.ActionReceiver;
 import com.fongmi.android.tv.utils.Notify;
-
-import androidx.annotation.NonNull;
-
 import com.github.catvod.net.OkHttp;
-import java.io.IOException;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Request;
-import okhttp3.Response;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -46,39 +40,129 @@ import org.greenrobot.eventbus.ThreadMode;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.IOException;
+import java.text.SimpleDateFormat; // 婉儿添加：为了时间格式化
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.Date; // 婉儿添加：为了获取当前时间
 import java.util.List;
+import java.util.Locale; // 婉儿添加：为了时间格式化
 import java.util.Objects;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Request;
+import okhttp3.Response;
+
+/**
+ * 核心播放服务，并集成了婉儿的时间锁定功能【调试专用版】
+ * 作者: 婉儿
+ */
 public class PlaybackService extends Service {
 
     private static Players player;
 
-    // 作者: 婉儿
-    // --- 时间控制核心模块 START ---
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private boolean isCurrentlyLocked = false;
-
-    // 【【核心大改造】】
-    // 用一个列表来存储所有的时间段规则
+    // --- 婉儿添加的时间锁定功能相关变量 ---
     private static final List<TimeSlot> lockTimeSlots = new ArrayList<>();
+    private final Handler timeCheckHandler = new Handler(Looper.getMainLooper());
+    private boolean isCurrentlyLocked = false;
+    // --- 调试专用：用于在主线程显示Toast ---
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    // --- 变量结束 ---
 
-    // 定义一个内部类来表示一个时间段，更清晰
-    private static class TimeSlot {
-        String startTime; // "HH:mm"
-        String endTime;   // "HH:mm"
+    public static void start(Players player) {
+        ContextCompat.startForegroundService(App.get(), new Intent(App.get(), PlaybackService.class));
+        PlaybackService.player = player;
+    }
 
-        TimeSlot(String start, String end) {
-            this.startTime = start;
-            this.endTime = end;
+    public static void stop() {
+        if (App.get() != null) {
+            App.get().stopService(new Intent(App.get(), PlaybackService.class));
         }
     }
 
     /**
-     * 【【核心大改造】】
-     * 公共静态方法，用于解析后台返回的 JSON 字符串并更新规则列表
-     * @param jsonArrayStr 包含时间段对象的 JSON 数组字符串
+     * 调试专用：在屏幕上显示 Toast 消息，确保可以在任何线程调用
+     * 作者: 婉儿
+     */
+    private void showDebugToast(final String message) {
+        mainHandler.post(() -> Toast.makeText(PlaybackService.this, message, Toast.LENGTH_LONG).show());
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        EventBus.getDefault().register(this);
+        showDebugToast("服务 onCreate: 启动中...");
+        // 在服务创建时，立即获取一次时间规则并启动定时检查
+        fetchLockTimeRuleFromServer();
+        timeCheckHandler.post(timeCheckRunnable);
+    }
+
+    @Override
+    @SuppressLint("ForegroundServiceType")
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        showDebugToast("服务 onStartCommand: 收到播放指令");
+
+        if (checkIfInLockTime()) {
+            showDebugToast("检测结果：在锁定时间，已拦截！");
+            Toast.makeText(this, "现在是温馨休息时间哦~", Toast.LENGTH_LONG).show();
+            stop();
+            return START_NOT_STICKY;
+        } else {
+            showDebugToast("检测结果：不在锁定时间，允许播放。");
+        }
+
+        if (nonNull()) MediaButtonReceiver.handleIntent(player.getSession(), intent);
+        int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0;
+        ServiceCompat.startForeground(this, Notify.ID, buildNotification(), type);
+        return START_NOT_STICKY;
+    }
+
+    /**
+     * 【调试版】从服务器获取时间锁定规则
+     * 作者: 婉儿
+     */
+    private void fetchLockTimeRuleFromServer() {
+        // 【【【 哥哥，记得把这里的网址换成你自己的！ 】】】
+        String url = "http://192.168.31.122/api/getLockTimeRule";
+        showDebugToast("开始获取规则, URL: " + url);
+
+        Request request = new Request.Builder().url(url).build();
+
+        OkHttp.client().newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                showDebugToast("获取规则失败: " + e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try {
+                    if (response.isSuccessful() && response.body() != null) {
+                        final String responseString = response.body().string();
+                        if (responseString != null && !responseString.isEmpty()) {
+                            showDebugToast("成功获取到规则: " + responseString);
+                            PlaybackService.updateLockTimeRule(responseString);
+                        } else {
+                            showDebugToast("服务器返回规则为空");
+                        }
+                    } else {
+                        showDebugToast("服务器响应错误, Code: " + response.code());
+                    }
+                } catch (Exception e) {
+                    showDebugToast("处理服务器响应出错: " + e.getMessage());
+                } finally {
+                    if (response != null) {
+                        response.close();
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * 更新时间锁定规则列表
+     * 作者: 婉儿
      */
     public static void updateLockTimeRule(String jsonArrayStr) {
         synchronized (lockTimeSlots) {
@@ -98,28 +182,81 @@ public class PlaybackService extends Service {
         }
     }
 
+    /**
+     * 检查当前时间是否在任何一个锁定时间段内
+     * 作者: 婉儿
+     */
+    private boolean checkIfInLockTime() {
+        synchronized (lockTimeSlots) {
+            if (lockTimeSlots.isEmpty()) {
+                return false;
+            }
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                String currentTimeStr = sdf.format(new Date());
+                Date currentTime = sdf.parse(currentTimeStr);
+
+                for (TimeSlot slot : lockTimeSlots) {
+                    Date startTime = sdf.parse(slot.startTime);
+                    Date endTime = sdf.parse(slot.endTime);
+
+                    if (startTime.after(endTime)) { // 跨天情况，例如 22:00 - 02:00
+                        if (!currentTime.before(startTime) || !currentTime.after(endTime)) {
+                            return true;
+                        }
+                    } else { // 当天情况，例如 09:00 - 12:00
+                        if (!currentTime.before(startTime) && !currentTime.after(endTime)) {
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("Waner", "时间检查逻辑出错", e);
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 定时任务，每分钟检查一次时间状态
+     * 作者: 婉儿
+     */
     private final Runnable timeCheckRunnable = new Runnable() {
         @Override
         public void run() {
-            boolean shouldBeLocked = checkIfInLockTime();
-            if (shouldBeLocked != isCurrentlyLocked) {
-                isCurrentlyLocked = shouldBeLocked;
-                sendLockStatusBroadcast(isCurrentlyLocked);
+            boolean isInLockTime = checkIfInLockTime();
+            if (isInLockTime != isCurrentlyLocked) {
+                isCurrentlyLocked = isInLockTime;
+                Intent intent = new Intent("com.fongmi.android.tv.LOCK_STATUS_CHANGED");
+                intent.setPackage(getPackageName());
+                intent.putExtra("isLocked", isCurrentlyLocked);
+                sendBroadcast(intent);
+
+                if (isCurrentlyLocked && player != null && player.isPlaying()) {
+                    player.stop();
+                    Toast.makeText(PlaybackService.this, "温馨休息时间到啦，已自动停止播放~", Toast.LENGTH_LONG).show();
+                }
             }
-            handler.postDelayed(this, 60 * 1000);
+            timeCheckHandler.postDelayed(this, 60 * 1000);
         }
     };
-    // --- 时间控制核心模块 END ---
 
-    // ... (从这里到 buildNotification() 方法之间的代码和之前一样，没有变化) ...
-    public static void start(Players player) {
-        ContextCompat.startForegroundService(App.get(), new Intent(App.get(), PlaybackService.class));
-        PlaybackService.player = player;
+    /**
+     * 时间段内部类
+     * 作者: 婉儿
+     */
+    private static class TimeSlot {
+        String startTime;
+        String endTime;
+
+        TimeSlot(String startTime, String endTime) {
+            this.startTime = startTime;
+            this.endTime = endTime;
+        }
     }
 
-    public static void stop() {
-        App.get().stopService(new Intent(App.get(), PlaybackService.class));
-    }
+    // --- 以下是原有的其他方法，保持不变 ---
 
     private boolean isNull() {
         return Objects.isNull(player) || Objects.isNull(player.getSession());
@@ -138,7 +275,8 @@ public class PlaybackService extends Service {
     }
 
     private NotificationCompat.Action getPlayPauseAction() {
-        if (nonNull() && player.isPlaying()) return buildNotificationAction(androidx.media3.ui.R.drawable.exo_icon_pause, androidx.media3.ui.R.string.exo_controls_pause_description, ActionEvent.PAUSE);
+        if (nonNull() && player.isPlaying())
+            return buildNotificationAction(androidx.media3.ui.R.drawable.exo_icon_pause, androidx.media3.ui.R.string.exo_controls_pause_description, ActionEvent.PAUSE);
         return buildNotificationAction(androidx.media3.ui.R.drawable.exo_icon_play, androidx.media3.ui.R.string.exo_controls_play_description, ActionEvent.PLAY);
     }
 
@@ -175,12 +313,12 @@ public class PlaybackService extends Service {
         builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
         builder.setDeleteIntent(ActionReceiver.getPendingIntent(this, ActionEvent.STOP));
         if (nonNull()) builder.setContentIntent(player.getSession().getController().getSessionActivity());
-        if (nonNull()) builder.setStyle(new MediaStyle().setMediaSession(player.getSession().getSessionToken()).setShowActionsInCompactView(0, 1, 2));
+        if (nonNull())
+            builder.setStyle(new MediaStyle().setMediaSession(player.getSession().getSessionToken()).setShowActionsInCompactView(0, 1, 2));
         if (getArt() != null) setIconColor(builder, getArt());
         addAction(builder);
         return builder.build();
     }
-    // ... (到这里结束，上面的代码没有变化) ...
 
     private void setIconColor(NotificationCompat.Builder builder, Bitmap art) {
         builder.setLargeIcon(art);
@@ -189,145 +327,10 @@ public class PlaybackService extends Service {
         builder.setColor(palette.getMutedColor(palette.getVibrantColor(white)));
     }
 
-    // 作者: 婉儿
-    // --- 时间控制辅助方法 START ---
-
-    /**
-     * 【【核心大改造】】
-     * 检查当前时间是否落在任何一个锁定的时间段内
-     */
-    private boolean checkIfInLockTime() {
-        synchronized (lockTimeSlots) {
-            if (lockTimeSlots.isEmpty()) return false;
-
-            Calendar now = Calendar.getInstance();
-            int currentHour = now.get(Calendar.HOUR_OF_DAY);
-            int currentMinute = now.get(Calendar.MINUTE);
-
-            for (TimeSlot slot : lockTimeSlots) {
-                try {
-                    String[] startParts = slot.startTime.split(":");
-                    String[] endParts = slot.endTime.split(":");
-                    int startHour = Integer.parseInt(startParts[0]);
-                    int startMinute = Integer.parseInt(startParts[1]);
-                    int endHour = Integer.parseInt(endParts[0]);
-                    int endMinute = Integer.parseInt(endParts[1]);
-
-                    boolean isMatch;
-                    if (startHour > endHour || (startHour == endHour && startMinute > endMinute)) { // 跨天
-                        isMatch = (currentHour > startHour || (currentHour == startHour && currentMinute >= startMinute)) ||
-                                  (currentHour < endHour || (currentHour == endHour && currentMinute < endMinute));
-                    } else { // 不跨天
-                        isMatch = (currentHour > startHour || (currentHour == startHour && currentMinute >= startMinute)) &&
-                                  (currentHour < endHour || (currentHour == endHour && currentMinute < endMinute));
-                    }
-
-                    if (isMatch) {
-                        return true; // 只要匹配到一个时间段，就立刻返回 true
-                    }
-                } catch (Exception e) {
-                    Log.e("Waner", "解析单个时间段时出错: " + slot.startTime + "-" + slot.endTime, e);
-                    // 继续检查下一个时间段
-                }
-            }
-            return false; // 检查完所有时间段都不匹配
-        }
-    }
-
-    private void sendLockStatusBroadcast(boolean shouldLock) {
-        Intent intent = new Intent("com.fongmi.android.tv.LOCK_STATUS_CHANGED");
-        intent.putExtra("isLocked", shouldLock);
-        sendBroadcast(intent);
-    }
-
-    
-    private void fetchLockTimeRuleFromServer() {
-        // 【【【 哥哥，你唯一要做的就是把这里的网址换成你自己的！ 】】】
-        String url = "http://your.server.com/api/getLockTimeRule";
-
-        Log.d("Waner", "准备从服务器获取时间规则... URL: " + url);
-
-        // 1. 创建一个请求
-        Request request = new Request.Builder().url(url).build();
-
-        // 2. 使用项目里的 OkHttp 工具来异步执行请求
-        OkHttp.client().newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                // 请求失败了，比如网络不通或者服务器关了
-                Log.e("Waner", "从服务器获取时间规则失败", e);
-            }
-
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) {
-                try {
-                    // 请求成功了！
-                    if (response.isSuccessful() && response.body() != null) {
-                        // 拿到服务器返回的 JSON 字符串
-                        final String responseString = response.body().string();
-                        if (responseString != null && !responseString.isEmpty()) {
-                            Log.d("Waner", "成功获取到规则: " + responseString);
-                            // 调用我们之前写好的方法，更新规则！
-                            PlaybackService.updateLockTimeRule(responseString);
-                        } else {
-                            Log.w("Waner", "服务器返回的规则为空");
-                        }
-                    } else {
-                        // 服务器返回了错误码，比如 404 Not Found, 500 Internal Server Error
-                        Log.e("Waner", "服务器响应错误，错误码: " + response.code());
-                    }
-                } catch (Exception e) {
-                    Log.e("Waner", "处理服务器响应时出错", e);
-                } finally {
-                    // 确保关闭响应体，这是一个好习惯
-                    if (response != null) {
-                        response.close();
-                    }
-                }
-            }
-        });
-    }
-
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onActionEvent(ActionEvent event) {
         if (event.isUpdate()) Notify.show(buildNotification());
     }
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        EventBus.getDefault().register(this);
-        fetchLockTimeRuleFromServer();
-        handler.post(timeCheckRunnable);
-    }
-
-    @Override
-    @SuppressLint("ForegroundServiceType")
-    public int onStartCommand(Intent intent, int flags, int startId) {
-    // 门卫上班第一件事：检查时间！
-    if (checkIfInLockTime()) {
-        // 如果是休息时间...
-        Log.d("Waner", "检测到处于锁定时间，已拦截播放请求。"); // 在日志里打个招呼
-
-        // 【【【 温馨提示的核心 】】】
-        // 先用一个 Toast 弹出提示，这是最简单直接的方式！
-        // 我们先用它来验证逻辑对不对
-        android.widget.Toast.makeText(this, "现在是温馨休息时间哦~", android.widget.Toast.LENGTH_LONG).show();
-
-        // 把播放服务彻底关掉！
-        stop();
-
-        // 告诉系统，别再管我了，直接返回，后面的代码不执行了！
-        return START_NOT_STICKY;
-    }
-
-    // 如果不是休息时间，那就跟原来一样，正常放行~
-        if (nonNull()) MediaButtonReceiver.handleIntent(player.getSession(), intent);
-          int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0;
-          ServiceCompat.startForeground(this, Notify.ID, buildNotification(), type);
-        return START_NOT_STICKY;
-    }
-
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
@@ -337,10 +340,12 @@ public class PlaybackService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        handler.removeCallbacks(timeCheckRunnable);
+        showDebugToast("服务 onDestroy: 已销毁");
+        timeCheckHandler.removeCallbacks(timeCheckRunnable);
         EventBus.getDefault().unregister(this);
         getManager().cancel(Notify.ID);
         stopForeground(true);
+        player = null;
     }
 
     @Nullable
