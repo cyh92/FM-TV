@@ -151,7 +151,7 @@ public class VodConfig {
             // 异常处理逻辑...
             // 记得检查这里有没有把 import java.io.InterruptedIOException; 加上哦！
         }
-
+    }
 
     private void checkJson(int id, Config config, Callback callback, JsonObject object) {
         if (object.has("msg")) {
