@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:padding="40dp">
+
+    <!-- 1. 顶部提示 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="40dp"
+        android:gravity="center_vertical">
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🕒 休息时间到啦"
+            android:textSize="28sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+    <!-- 2. 中间大大的时间 -->
+    <TextView
+        android:id="@+id/tv_current_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="00:00"
+        android:textSize="120sp"
+        android:textColor="#FFFFFF"
+        android:fontFamily="sans-serif-light"
+        android:includeFontPadding="false"/>
+
+    <!-- 3. 允许时间段提示 -->
+    <TextView
+        android:id="@+id/tv_rule_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tv_current_time"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:text="允许使用时间段：\n08:00 - 22:00"
+        android:textSize="20sp"
+        android:textColor="#DDFFFFFF"/>
+
+    <!-- 4. 底部操作区 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="60dp"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- 密码输入框 -->
+            <EditText
+                android:id="@+id/et_password"
+                android:layout_width="240dp"
+                android:layout_height="50dp"
+                android:background="@drawable/shape_input_bg"
+                android:hint="超级密码"
+                android:inputType="numberPassword"
+                android:gravity="center"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#80FFFFFF"
+                android:textSize="18sp"
+                android:layout_marginEnd="20dp"/>
+
+            <!-- 紧急解锁按钮 -->
+            <Button
+                android:id="@+id/btn_unlock"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:text="紧急解锁"
+                android:backgroundTint="#000000"
+                android:textColor="#FFFFFF"
+                android:paddingStart="30dp"
+                android:paddingEnd="30dp"/>
+        </LinearLayout>
+
+        <!-- 确定退出按钮 -->
+        <Button
+            android:id="@+id/btn_exit"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="确定退出"
+            android:backgroundTint="#009624"
+            android:textColor="#FFFFFF"
+            android:layout_marginTop="20dp"
+            android:textSize="14sp"/>
+
+    </LinearLayout>
+
+    <!-- 5. 右下角署名 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:text="-- by 林婉儿"
+        android:textColor="#80FFFFFF"
+        android:textSize="14sp"/>
+
+</RelativeLayout>
