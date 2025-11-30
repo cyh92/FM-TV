@@ -130,26 +130,37 @@ public class LiveConfig {
         load(new Callback());
     }
 
-    // 婉儿只保留了这一个 load(Callback callback) 方法
     public void load(Callback callback) {
         if (executor != null) executor.shutdownNow();
         executor = java.util.concurrent.Executors.newSingleThreadExecutor();
-        executor.execute(() -> loadConfig(callback));
+        // 【修改点 1】补齐参数：1 (代表直播类型) 和 Config.live() (获取当前直播配置)
+        // 原来是: executor.execute(() -> loadConfig(callback));
+        executor.execute(() -> loadConfig(1, Config.live(), callback));
     }
 
+    // 注意：这里的参数定义是对的，不用改
     private void loadConfig(int id, Config config, Callback callback) {
         try {
             OkHttp.cancel("live");
             String configUrl = config.getUrl();
+            
+            // 这里的逻辑保持不变
             if (configUrl.equals(Constants.BUILTIN_PLACEHOLDER)) {
-                configUrl = Constants.BUILTIN_URL; // 替换占位符为真实地址
+                configUrl = Constants.BUILTIN_URL; 
             }
 
-            String jsonStr = Decoder.getJson(UrlUtil.convert(configUrl));
+            // 【修改点 2】补齐参数：null
+            // 原来是: Decoder.getJson(UrlUtil.convert(configUrl))
+            String jsonStr = Decoder.getJson(UrlUtil.convert(configUrl), null);
+            
             com.google.gson.JsonObject configObj = com.google.gson.JsonParser.parseString(jsonStr).getAsJsonObject();
-            parseConfig(configObj, callback);
+            
+            // 【修改点 3】补齐参数：id, config, callback, configObj
+            // 原来是: parseConfig(configObj, callback);
+            parseConfig(id, config, callback, configObj);
 
         } catch (Throwable e) {
+            // 异常处理逻辑保持不变
             if (TextUtils.isEmpty(config.getUrl())) {
                 config = Config.find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 1);
                 App.post(() -> callback.error(""));
@@ -159,6 +170,7 @@ public class LiveConfig {
             e.printStackTrace();
         }
     }
+
 
     private void parseText(int id, Config config, Callback callback, String text) {
         Live live = new Live(parseName(config.getUrl()), config.getUrl()).sync();
