@@ -112,10 +112,10 @@ public class VodConfig {
     }
 
     private void loadConfig(int id, Config config, Callback callback) {
-        try {
+               try {
             // 1. 防御性检查Config对象
             if (config == null) {
-                config = Config.vod(); // 重新初始化
+                config = Config.vod(); 
                 Logger.e("Config is null, fallback to default!");
             }
 
@@ -124,7 +124,10 @@ public class VodConfig {
             if (TextUtils.isEmpty(loadUrl)) {
                 Logger.e("Config URL is empty, use built-in source!");
                 config = Config.find(Constants.BUILTIN_PLACEHOLDER, Constants.BUILTIN_NAME, 0);
-                loadConfig(callback);
+                
+                // 【修改点 1】补齐参数：0 和 config
+                // 原来是: loadConfig(callback);
+                loadConfig(0, config, callback); 
                 return;
             }
 
@@ -135,13 +138,20 @@ public class VodConfig {
 
             // 4. 取消旧请求并加载新配置
             OkHttp.cancel("vod");
-            JsonObject json = Json.parse(Decoder.getJson(UrlUtil.convert(loadUrl))).getAsJsonObject();
-            checkJson(json, callback);
+            
+            // 【修改点 2】补齐参数：null (作为第二个参数)
+            // 原来是: Decoder.getJson(UrlUtil.convert(loadUrl))
+            JsonObject json = Json.parse(Decoder.getJson(UrlUtil.convert(loadUrl), null)).getAsJsonObject();
+            
+            // 【修改点 3】补齐参数：0, config, callback, 并且把 json 放到最后
+            // 原来是: checkJson(json, callback);
+            checkJson(0, config, callback, json);
 
         } catch (Throwable e) {
             // 异常处理逻辑...
+            // 记得检查这里有没有把 import java.io.InterruptedIOException; 加上哦！
         }
-    }
+
 
     private void checkJson(int id, Config config, Callback callback, JsonObject object) {
         if (object.has("msg")) {
