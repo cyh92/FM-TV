@@ -206,18 +206,25 @@ public class LiveConfig {
         Config.delete(config.getUrl());
     }
 
-    private void parseConfig(int id, Config config, Callback callback, JsonObject object) {
+    private void parseConfig(int id, Config config, Callback callback, com.google.gson.JsonObject object) {
         try {
             initList(object);
-            initLive(config, object);
-            if (taskId.get() != id) return;
+            
+            // 注意：如果 initLive 报错说参数太多，就改成 initLive(object);
+            initLive(config, object); 
+            
+            // ❌ 删掉这行：if (taskId.get() != id) return;
+            
             if (callback != null) App.post(callback::success);
         } catch (Throwable e) {
             e.printStackTrace();
-            if (taskId.get() != id) return;
+            
+            // ❌ 删掉这行：if (taskId.get() != id) return;
+            
             if (callback != null) App.post(() -> callback.error(Notify.getError(R.string.error_config_parse, e)));
         }
     }
+
 
     private void initList(JsonObject object) {
         setHeaders(Header.arrayFrom(object.getAsJsonArray("headers")));
