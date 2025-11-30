@@ -2,9 +2,12 @@ package com.fongmi.android.tv.db;
 
 import android.content.Context;
 
+import androidx.annotation.NonNull; // 新增引用
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.migration.Migration; // 新增引用
+import androidx.sqlite.db.SupportSQLiteDatabase; // 新增引用
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.bean.Backup;
@@ -35,7 +38,8 @@ import java.util.Locale;
 @Database(entities = {Keep.class, Site.class, Live.class, Track.class, Config.class, Device.class, History.class}, version = AppDatabase.VERSION)
 public abstract class AppDatabase extends RoomDatabase {
 
-    public static final int VERSION = 34;
+    // 1. 修改版本号为 35
+    public static final int VERSION = 35;
     public static final String NAME = "tv";
     public static final String SYMBOL = "@@@";
 
@@ -45,6 +49,30 @@ public abstract class AppDatabase extends RoomDatabase {
         if (instance == null) instance = create(App.get());
         return instance;
     }
+
+    // 2. 定义迁移策略：从 34 升级到 35
+    static final Migration MIGRATION_34_35 = new Migration(34, 35) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            // 哥哥，请根据你这次 History.java 实际新增的字段，保留下面对应的 SQL 语句
+            // 如果不确定，可以都留着，Room 会尝试添加，如果已存在可能会报错，但通常 ADD COLUMN 是安全的
+
+            // 情况 A: 如果你加了 cid (频道ID)
+            try {
+                database.execSQL("ALTER TABLE History ADD COLUMN cid INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception e) { e.printStackTrace(); }
+
+            // 情况 B: 如果你加了 scale (画面比例)
+            try {
+                database.execSQL("ALTER TABLE History ADD COLUMN scale INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception e) { e.printStackTrace(); }
+
+            // 情况 C: 如果你加了 speed (倍速)
+            try {
+                database.execSQL("ALTER TABLE History ADD COLUMN speed REAL NOT NULL DEFAULT 1.0");
+            } catch (Exception e) { e.printStackTrace(); }
+        }
+    };
 
     public static void backup() {
         backup(new com.fongmi.android.tv.impl.Callback());
@@ -95,8 +123,10 @@ public abstract class AppDatabase extends RoomDatabase {
                 .addMigrations(Migrations.MIGRATION_31_32)
                 .addMigrations(Migrations.MIGRATION_32_33)
                 .addMigrations(Migrations.MIGRATION_33_34)
-                .fallbackToDestructiveMigration(true)
-                .allowMainThreadQueries().build();
+                .addMigrations(MIGRATION_34_35) // 3. 注册我们的新迁移策略
+                .fallbackToDestructiveMigration(true) // 兜底：如果迁移失败，重建数据库（防止崩溃）
+                .allowMainThreadQueries()
+                .build();
     }
 
     public abstract KeepDao getKeepDao();
