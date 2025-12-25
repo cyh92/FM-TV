@@ -16,14 +16,14 @@ jobs:
       uses: Mattraks/delete-workflow-runs@v2
       with:
         token: ${{ github.token }}
-        repository: ${{ github.repository }}
+        仓库: ${{ github.repository }}
         retain_days: 0 # 
         keep_minimum_runs: 1 # 
         
     - name: Clone project
       run: |
         rm -rf ./*
-        git clone -b release --recurse-submodules https://github.com/FongMi/TV Project
+        git clone -b new-fm --recurse-submodules https://gitee.com/cyh92/ok-tv Project
         cp -r Project/* ${{ github.workspace }}
         rm -rf Project
         
