@@ -23,11 +23,14 @@ import androidx.viewbinding.ViewBinding;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.Setting;
 import com.fongmi.android.tv.Updater;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.api.config.WallConfig;
+import com.fongmi.android.tv.bean.Class;
 import com.fongmi.android.tv.bean.Config;
+import com.fongmi.android.tv.bean.Filter;
 import com.fongmi.android.tv.bean.Func;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Result;
@@ -55,6 +58,7 @@ import com.fongmi.android.tv.ui.presenter.FuncPresenter;
 import com.fongmi.android.tv.ui.presenter.HeaderPresenter;
 import com.fongmi.android.tv.ui.presenter.HistoryPresenter;
 import com.fongmi.android.tv.ui.presenter.ProgressPresenter;
+import com.fongmi.android.tv.ui.presenter.TypePresenter;
 import com.fongmi.android.tv.ui.presenter.VodPresenter;
 import com.fongmi.android.tv.utils.Clock;
 import com.fongmi.android.tv.utils.FileChooser;
@@ -63,8 +67,10 @@ import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.utils.Tbs;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.net.OkHttp;
+import com.github.catvod.utils.Prefers;
 import com.google.common.collect.Lists;
 
 import org.greenrobot.eventbus.Subscribe;
@@ -73,9 +79,10 @@ import org.greenrobot.eventbus.ThreadMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-public class HomeActivity extends BaseActivity implements CustomTitleView.Listener, VodPresenter.OnClickListener, FuncPresenter.OnClickListener, HistoryPresenter.OnClickListener {
+public class HomeActivity extends BaseActivity implements CustomTitleView.Listener, TypePresenter.OnClickListener, VodPresenter.OnClickListener, FuncPresenter.OnClickListener, HistoryPresenter.OnClickListener {
 
     private ActivityHomeBinding mBinding;
     private ArrayObjectAdapter mHistoryAdapter;
@@ -85,6 +92,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private SiteViewModel mViewModel;
     private Result mResult;
     private Clock mClock;
+
+    private ArrayObjectAdapter mTabAdapter;
+    private long mExitTime = 0;//退出响应时间
 
     private Site getHome() {
         return VodConfig.get().getHome();
@@ -117,8 +127,11 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         mClock = Clock.create(mBinding.clock);
         mBinding.progressLayout.showProgress();
         Updater.create().start(this);
+        Tbs.init();
+        setTitleView();//根据UI风格改变文字大小
         setRecyclerView();
         setViewModel();
+        setHomeType();//首页菜单
         setAdapter();
         initConfig();
         setTitle();
@@ -155,6 +168,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @SuppressLint("RestrictedApi")
     private void setRecyclerView() {
+        setHomeUI();
         CustomSelector selector = new CustomSelector();
         selector.addPresenter(Integer.class, new HeaderPresenter());
         selector.addPresenter(String.class, new ProgressPresenter());
@@ -164,6 +178,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_SMALL, HorizontalGridView.FOCUS_SCROLL_ALIGNED), HistoryPresenter.class);
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(selector)));
         mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(16));
+        mBinding.tabMenu.setAdapter(new ItemBridgeAdapter(mTabAdapter = new ArrayObjectAdapter(new TypePresenter(this))));
     }
 
     private void setViewModel() {
@@ -171,13 +186,57 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         mViewModel.result.observe(this, result -> {
             mAdapter.remove("progress");
             addVideo(mResult = result);
+            setTypes();
         });
     }
+    private void setHomeUI() {
+        if (Setting.getHomeUI() == 0) mBinding.tabMenu.setVisibility(View.GONE);
+        else mBinding.tabMenu.setVisibility(View.VISIBLE);
+    }
+    private void setTitleView() {
+        if (Setting.getHomeUI() == 0) {
+            mBinding.title.setTextSize(24);
+            mBinding.clock.setTextSize(24);
+        } else {
+            mBinding.title.setTextSize(20);
+            mBinding.clock.setTextSize(20);
+        }
+    }
+    //首页菜单
+    private void setHomeType() {
+        com.fongmi.android.tv.bean.Class home = new com.fongmi.android.tv.bean.Class();
+        home.setTypeId("home");
+        home.setTypeName(ResUtil.getString(R.string.vod_home));
+        mTabAdapter.add(home);
+    }
 
+    private List<Class> getTypes(Result result) {
+        List<Class> items = new ArrayList<>();
+        for (String cate : getHome().getCategories())
+            for (Class item : result.getTypes())
+                if (cate.equals(item.getTypeName())) items.add(item);
+        return items;
+    }
+    public void setTypes() {
+        mResult.setTypes(getTypes(mResult));
+        for (Map.Entry<String, List<Filter>> entry : mResult.getFilters().entrySet()) Prefers.put("filter_" + getHome().getKey() + "_" + entry.getKey(), App.gson().toJson(entry.getValue()));
+        for (Class item : mResult.getTypes()) item.setFilters(getFilter(item.getTypeId()));
+        if (mTabAdapter.size() > 1) mTabAdapter.removeItems(1, mTabAdapter.size() - 1);
+        if (mResult.getTypes().size() > 0) mTabAdapter.addAll(1, mResult.getTypes());
+//        setPager();
+//        mPageAdapter.notifyDataSetChanged();
+//        getHomeFragment().addVideo(result);
+//        getHomeFragment().mBinding.progressLayout.showContent();
+        App.post(() -> setFocus(), 200);
+    }
+
+    private List<Filter> getFilter(String typeId) {
+        return Filter.arrayFrom(Prefers.getString("filter_" + getHome().getKey() + "_" + typeId));
+    }
     private void setAdapter() {
         mHistoryAdapter = new ArrayObjectAdapter(mPresenter = new HistoryPresenter(this));
         mAdapter.add(new ListRow(mFuncAdapter = new ArrayObjectAdapter(new FuncPresenter(this))));
-        mAdapter.add(R.string.home_history);
+        if (Setting.isHomeHistory())mAdapter.add(R.string.home_history);
         mAdapter.add(R.string.home_recommend);
     }
 
@@ -265,12 +324,13 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void setFunc() {
         List<Func> items = new ArrayList<>();
-        items.add(Func.create(R.string.home_vod));
+        if (Setting.getHomeUI() == 0)items.add(Func.create(R.string.home_vod));
         if (LiveConfig.hasUrl()) items.add(Func.create(R.string.home_live));
         items.add(Func.create(R.string.home_search));
         items.add(Func.create(R.string.home_keep));
         items.add(Func.create(R.string.home_push));
         items.add(Func.create(R.string.home_cast));
+        items.add(Func.create(R.string.home_history_short));
         items.add(Func.create(R.string.home_setting));
         mFuncAdapter.setItems(items, new BaseDiffCallback<Func>());
     }
@@ -280,9 +340,22 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     }
 
     private void getHistory(boolean renew) {
-        List<History> items = History.get();
         int historyIndex = getHistoryIndex();
         int recommendIndex = getRecommendIndex();
+        if (historyIndex == 0) {
+            if (!Setting.isHomeHistory()) return;
+            int historyStringIndex = recommendIndex - 1;
+//            historyStringIndex = historyStringIndex < 0 ? 0 : historyStringIndex;
+            mAdapter.add(historyStringIndex, R.string.home_history);
+        }
+        if (!Setting.isHomeHistory()) {
+            //在最近观看存在数据时移除“最近观看”标签和观看的视频详情两行
+            mAdapter.removeItems(historyIndex - 1, mHistoryAdapter.size()>0?2:1);
+            return;
+        }
+        List<History> items = History.get();
+        historyIndex = getHistoryIndex();
+        recommendIndex = getRecommendIndex();
         boolean exist = recommendIndex - historyIndex == 2;
         if (renew) mHistoryAdapter = new ArrayObjectAdapter(mPresenter = new HistoryPresenter(this));
         if ((items.isEmpty() && exist) || (renew && exist)) mAdapter.removeItems(historyIndex, 1);
@@ -393,6 +466,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             case R.string.home_cast:
                 CastActivity.start(this);
                 break;
+                case R.string.home_history_short:
+                HistoryActivity.start(this);
+                break;
             case R.string.home_setting:
                 SettingActivity.start(this);
                 break;
@@ -453,6 +529,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (KeyUtil.isMenuKey(event)) showDialog();
         if (KeyUtil.isActionDown(event) & KeyUtil.isDownKey(event) && getCurrentFocus() == mBinding.title) return mBinding.recycler.getChildAt(0).requestFocus();
+        if(KeyUtil.isActionDown(event)&&KeyUtil.isDigitKey(event))LiveActivity.start(this);//主页面按任意数字键进入直播
         return super.dispatchKeyEvent(event);
     }
 
@@ -460,6 +537,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     protected void onResume() {
         super.onResume();
         mClock.start();
+        setTitleView();
+        setHomeUI();
+        setFunc();
     }
 
     @Override
@@ -476,9 +556,13 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             setHistoryDelete(false);
         } else if (mBinding.recycler.getSelectedPosition() != 0) {
             mBinding.recycler.scrollToPosition(0);
-        } else {
-            if (PlaybackService.isRunning()) moveTaskToBack(true);
-            else super.onBackInvoked();
+        } else {//新增
+            if (System.currentTimeMillis() - mExitTime < 2000) {
+                super.onBackInvoked();
+            } else {
+                mExitTime = System.currentTimeMillis();
+                Notify.show("再按一次返回键退出应用");
+            }
         }
     }
 
@@ -492,5 +576,17 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         Source.get().exit();
         Server.get().stop();
         super.onDestroy();
+    }
+
+    @Override
+    public void onItemClick(Class item) {
+        if (!"home".equals(item.getTypeId())) {
+            VodActivity.start(this, mResult);
+        }
+    }
+
+    @Override
+    public void onRefresh(Class item) {
+
     }
 }

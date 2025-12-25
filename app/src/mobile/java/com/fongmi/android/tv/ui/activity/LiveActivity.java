@@ -70,10 +70,18 @@ import com.fongmi.android.tv.utils.PiP;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Traffic;
 import com.fongmi.android.tv.utils.Util;
+import com.fongmi.android.tv.ui.custom.WebViewPlayer;
+import com.tencent.smtt.sdk.WebView;
+import com.tencent.smtt.sdk.WebViewClient;
+import com.orhanobut.logger.Logger;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -104,6 +112,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     private String tag;
     private int count;
     private PiP mPiP;
+    private WebViewPlayer webPlayer;
 
     public static void start(Context context) {
         context.startActivity(new Intent(context, LiveActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("empty", LiveConfig.isEmpty()));
@@ -143,6 +152,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     @Override
     protected void initView(Bundle savedInstanceState) {
+        webPlayer = new WebViewPlayer(this);
         mKeyDown = CustomKeyDown.create(this, mBinding.exo);
         setPadding(mBinding.control.getRoot());
         setPadding(mBinding.recycler, true);
@@ -201,6 +211,20 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void setVideoView() {
+        // Add WebViewPlayer to the video container
+        webPlayer.setVisibility(View.GONE);
+        mBinding.video.addView(webPlayer, 0); // 添加到最底层
+        
+        Logger.t("LiveActivity").d("设置视频容器触摸监听器");
+        mBinding.video.setOnTouchListener((view, event) -> {
+            Logger.t("LiveActivity").d("视频容器收到触摸事件: " + event.getAction() + 
+                                      ", 位置: (" + event.getX() + ", " + event.getY() + ")");
+            Logger.t("LiveActivity").d("WebViewPlayer透明状态: " + webPlayer.isTouchTransparent());
+            boolean result = mKeyDown.onTouchEvent(event);
+            Logger.t("LiveActivity").d("CustomKeyDownLive处理结果: " + result);
+            return result;
+        });
+        
         mPlayers.init(mBinding.exo);
         PlaybackService.start(mPlayers);
         setScale(Setting.getLiveScale());
@@ -555,12 +579,11 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void setArtwork() {
-        ImgUtil.load(this, mChannel.getLogo(), new CustomTarget<>() {
+        ImgUtil.load(this, mChannel.getLogo(),R.drawable.radio, new CustomTarget<>(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()) {
             @Override
             public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
                 mBinding.exo.setDefaultArtwork(resource);
             }
-
             @Override
             public void onLoadFailed(@Nullable Drawable errorDrawable) {
                 mBinding.exo.setDefaultArtwork(errorDrawable);
@@ -685,9 +708,84 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void start(Result result) {
-        mPlayers.start(result, false, getTimeout());
+//        Logger.t("LiveActivity").d("开始播放频道: " + result.getName() + ", mode=" + result.getMode() + ", URL=" + result.getUrl());
+        mBinding.control.seek.setVisibility(result.getParse() == 2 ? View.GONE : View.VISIBLE);
+        if (result.getParse() == 2) {
+            Logger.t("LiveActivity").d("切换到WebView模式");
+            showWebView(result);
+        } else {
+            Logger.t("LiveActivity").d("切换到标准播放器模式");
+            webPlayer.stop();
+            webPlayer.setVisibility(View.GONE);
+            mBinding.exo.setVisibility(View.VISIBLE);
+            mPlayers.start(result,false, getTimeout());
+        }
     }
 
+    // 显示WebView并加载URL
+    private void showWebView(Result result) {
+        try {
+            Logger.t("LiveActivity").d("初始化WebView播放器");
+            webPlayer.stop();
+            mBinding.exo.setVisibility(View.GONE);
+            webPlayer.setVisibility(View.VISIBLE);
+
+            // 检查WebViewPlayer的触摸透明状态
+            Logger.t("LiveActivity").d("WebViewPlayer触摸透明状态: " + webPlayer.isTouchTransparent());
+            Logger.t("LiveActivity").d("WebViewPlayer可点击状态: " + webPlayer.isClickable());
+            
+            // 设置回调监听
+            webPlayer.setCallback(new WebViewPlayer.VideoPlayerCallback() {
+                @Override
+                public void onPageStarted() {
+                    showProgress();
+                }
+                private boolean isScriptInjected = false;
+                @Override
+                public void onPageFinished(WebView webView) {
+                    Logger.t("WebView").e("页面加载完成");
+
+                    if (!isScriptInjected) {
+                        injectPlayerScript(webView);
+                        isScriptInjected = true;
+                    }
+                    hideProgress();
+                }
+                @Override
+                public void onPageLoadProgress(int progress) {
+                    if (progress >99) {
+                        hideProgress();
+                    }
+                }
+            });
+            
+            webPlayer.start(result);
+
+        } catch (Exception e) {
+            Logger.t("WebView").e("WebView初始化失败: " + e.getMessage());
+        }
+    }
+    //注入js
+    private void injectPlayerScript(WebView webView) {
+        try {
+            InputStream inputStream =getAssets().open("js/webview_player_impl.js");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+
+            webView.evaluateJavascript(sb.toString(), value -> {
+                Logger.t("WebView").d("播放器脚本注入完成");
+            });
+
+        } catch (IOException e) {
+            Logger.t("WebView").e("脚本注入失败: " + e.getMessage());
+            // 不抛出异常，允许页面继续加载
+        }
+    }
     private void checkControl() {
         if (isVisible(mBinding.control.getRoot())) showControl();
     }
@@ -850,6 +948,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         mBinding.control.action.audio.setVisibility(mPlayers.haveTrack(C.TRACK_TYPE_AUDIO) ? View.VISIBLE : View.GONE);
         mBinding.control.action.video.setVisibility(mPlayers.haveTrack(C.TRACK_TYPE_VIDEO) ? View.VISIBLE : View.GONE);
         mBinding.control.action.speed.setVisibility(mPlayers.isVod() ? View.VISIBLE : View.GONE);
+
+        mBinding.control.seek.setVisibility(mPlayers.isLive() ? View.GONE : View.VISIBLE);
     }
 
     private void setMetadata() {
@@ -1002,17 +1102,17 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     @Override
     public void onSpeedUp() {
-        if (mPlayers.isLive() || !mPlayers.isPlaying()) return;
-        mBinding.control.action.speed.setText(mPlayers.setSpeed(Setting.getSpeed()));
-        mBinding.widget.speed.startAnimation(ResUtil.getAnim(R.anim.forward));
+        if (mPlayers.isLive()) return;
+        if (!mPlayers.isPlaying()) return;
         mBinding.widget.speed.setVisibility(View.VISIBLE);
+        mBinding.widget.speed.startAnimation(ResUtil.getAnim(R.anim.forward));
+        mBinding.control.action.speed.setText(mPlayers.setSpeed(Setting.getSpeed()));
     }
 
     @Override
     public void onSpeedEnd() {
-        mBinding.control.action.speed.setText(mPlayers.setSpeed(1.0f));
-        mBinding.widget.speed.setVisibility(View.GONE);
         mBinding.widget.speed.clearAnimation();
+        mBinding.control.action.speed.setText(mPlayers.setSpeed(1.0f));
     }
 
     @Override
@@ -1025,22 +1125,12 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     @Override
-    public void onBrightEnd() {
-        mBinding.widget.bright.setVisibility(View.GONE);
-    }
-
-    @Override
     public void onVolume(int progress) {
         mBinding.widget.volume.setVisibility(View.VISIBLE);
         mBinding.widget.volumeProgress.setProgress(progress);
         if (progress < 35) mBinding.widget.volumeIcon.setImageResource(R.drawable.ic_widget_volume_low);
         else if (progress < 70) mBinding.widget.volumeIcon.setImageResource(R.drawable.ic_widget_volume_medium);
         else mBinding.widget.volumeIcon.setImageResource(R.drawable.ic_widget_volume_high);
-    }
-
-    @Override
-    public void onVolumeEnd() {
-        mBinding.widget.volume.setVisibility(View.GONE);
     }
 
     @Override
@@ -1056,7 +1146,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     @Override
-    public void onSeek(long time) {
+    public void onSeeking(long time) {
         if (mPlayers.isLive()) return;
         mBinding.widget.action.setImageResource(time > 0 ? R.drawable.ic_widget_forward : R.drawable.ic_widget_rewind);
         mBinding.widget.time.setText(mPlayers.getPositionTime(time));
@@ -1067,7 +1157,6 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     @Override
     public void onSeekEnd(long time) {
         if (mPlayers.isLive()) return;
-        mBinding.widget.seek.setVisibility(View.GONE);
         mPlayers.seek(time);
         showProgress();
         onPlay();
@@ -1083,6 +1172,14 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         if (isVisible(mBinding.recycler)) hideUI();
         if (isVisible(mBinding.control.getRoot())) hideControl();
         else showControl();
+    }
+
+    @Override
+    public void onTouchEnd() {
+        mBinding.widget.seek.setVisibility(View.GONE);
+        mBinding.widget.speed.setVisibility(View.GONE);
+        mBinding.widget.bright.setVisibility(View.GONE);
+        mBinding.widget.volume.setVisibility(View.GONE);
     }
 
     @Override
@@ -1164,7 +1261,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     @Override
-    protected void onDestroy() {
+    protected void onDestroy() { 
+        webPlayer.destroy();
         mPlayers.release();
         Source.get().exit();
         PlaybackService.stop();

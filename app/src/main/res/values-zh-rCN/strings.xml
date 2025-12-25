@@ -1,7 +1,11 @@
 <resources xmlns:xliff="http://schemas.android.com/apk/res-auto">
 
     <!-- App -->
-    <string name="app_name">影视</string>
+    <string name="app_name">筱筱影视</string>
+
+    <!-- Vod -->
+    <string name="vod_last">上次看到<xliff:g name="name">%s</xliff:g></string>
+    <string name="vod_home">推荐</string>
 
     <!-- Live -->
     <string name="live_pass">密码</string>
@@ -122,6 +126,9 @@
     <string name="dialog_config_hint">请输入配置…</string>
     <string name="dialog_config_name">请输入名称…</string>
     <string name="dialog_config_url">请输入地址…</string>
+    <string name="dialog_delete_record">删除全部纪录？</string>
+    <string name="dialog_delete_keep">收藏纪录将会全部删除。</string>
+    <string name="dialog_delete_history">观看纪录将会全部删除。</string>
 
     <!-- Error -->
     <string name="error_config_get">配置取得失败</string>
@@ -141,6 +148,12 @@
     <string name="update_version">发现新版本 <xliff:g name="name">%s</xliff:g></string>
     <string name="update_check">正在检测更新…</string>
     <string name="update_confirm">更新</string>
+
+    <!-- X5 WebView -->
+    <string name="x5webview_title">X5 WebView</string>
+    <string name="x5webview_download_enable">解压X5 WebView并启用?</string>
+    <string name="x5webview_enabled">X5 WebView已启用</string>
+    <string name="x5webview_parsing">X5 WebView嗅探中</string>
 
     <!-- Crash -->
     <string name="crash_info">发生意外错误\n抱歉给您带来不便</string>
@@ -192,6 +205,11 @@
         <item>选择音轨</item>
         <item>选择视轨</item>
         <item>选择字幕</item>
+    </string-array>
+
+    <string-array name="select_home_ui">
+        <item>简洁风格</item>
+        <item>TVBox风格</item>
     </string-array>
 
 </resources>

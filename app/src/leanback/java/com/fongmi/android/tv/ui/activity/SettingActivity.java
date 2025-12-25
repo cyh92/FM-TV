@@ -83,7 +83,7 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         mBinding.vodUrl.setText(VodConfig.getDesc());
         mBinding.liveUrl.setText(LiveConfig.getDesc());
         mBinding.wallUrl.setText(WallConfig.getDesc());
-        mBinding.versionText.setText(BuildConfig.VERSION_NAME);
+        mBinding.versionText.setText(BuildConfig.FLAVOR_mode + "-"+ BuildConfig.FLAVOR_abi+"_"+BuildConfig.VERSION_NAME);
         setCacheText();
         setOtherText();
     }
@@ -126,6 +126,7 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         mBinding.wallDefault.setOnClickListener(this::setWallDefault);
         mBinding.wallRefresh.setOnClickListener(this::setWallRefresh);
         mBinding.wallRefresh.setOnLongClickListener(this::onWallHistory);
+        mBinding.custom.setOnClickListener(this::onCustom);
     }
 
     @Override
@@ -244,6 +245,10 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         SettingPlayerActivity.start(this);
     }
 
+    private void onCustom(View view) {
+        SettingCustomActivity.start(this);
+    }
+
     private void onVersion(View view) {
         Updater.create().force().start(this);
     }
@@ -343,4 +348,10 @@ public class SettingActivity extends BaseActivity implements ConfigCallback, Sit
         if (result.getResultCode() != RESULT_OK || result.getData() == null || result.getData().getData() == null) return;
         setConfig(Config.find("file:/" + FileChooser.getPathFromUri(result.getData().getData()).replace(Path.rootPath(), ""), type));
     });
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        RefreshEvent.history();
+    }
 }

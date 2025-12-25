@@ -16,9 +16,6 @@
     <string name="menu_site">站点</string>
     <string name="menu_reset">重置</string>
 
-    <!-- Vod -->
-    <string name="vod_home">推荐</string>
-
     <!-- Detail -->
     <string name="detail_flag">线路</string>
     <string name="detail_episode">选集</string>

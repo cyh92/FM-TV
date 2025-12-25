@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -18,34 +19,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
-            android:layout_toStartOf="@+id/clock"
             android:ellipsize="marquee"
             android:singleLine="true"
             android:textColor="@color/white"
             android:textSize="20sp"
             tools:text="民視" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/size"
-            style="@style/Shadow"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/title"
-            android:layout_alignStart="@+id/title"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            tools:text="1920 x 1080" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/clock"
-            style="@style/Shadow"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:fontFeatureSettings="tnum"
-            android:textColor="@color/white"
-            android:textSize="20sp"
-            tools:text="09:20:00" />
 
     </RelativeLayout>
 
@@ -146,7 +124,7 @@
     <androidx.appcompat.widget.LinearLayoutCompat
         android:id="@+id/bottom"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:background="@drawable/shape_live_info"
         android:gravity="center"
@@ -156,51 +134,197 @@
         android:visibility="gone"
         tools:visibility="visible">
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/number"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:textColor="@color/white"
-            android:textSize="18sp"
-            tools:text="005" />
-
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/logo"
-            android:layout_width="48dp"
-            android:layout_height="36dp"
-            android:layout_marginEnd="12dp"
-            android:visibility="gone" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:maxEms="48"
-            android:singleLine="true"
-            android:textColor="@color/white"
-            android:textSize="18sp"
-            tools:text="民視" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/play"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
+            android:layout_width="270dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginRight="5dp"
+            android:layout_marginBottom="5dp"
             android:layout_weight="1"
-            android:singleLine="true"
-            android:textColor="@color/white"
-            android:textSize="18sp"
-            tools:text="正在播放：食神" />
+            app:srcCompat="@drawable/ic_img_empty" />
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/line"
-            android:layout_width="wrap_content"
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/white"
-            android:textSize="18sp"
-            tools:text="來源 1" />
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp">
+
+            <androidx.appcompat.widget.LinearLayoutCompat
+                android:id="@+id/ll_line1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:paddingBottom="2dp">
+
+                <View
+                    android:id="@+id/redLine"
+                    android:layout_width="5dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginLeft="3dp"
+                    android:layout_marginTop="1dp"
+                    android:layout_marginBottom="1dp"
+                    android:background="@color/color_theme" />
+
+                <com.fongmi.android.tv.ui.custom.MarqueeTextView
+                    android:id="@+id/play"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center|left"
+                    android:layout_weight="5"
+                    android:ellipsize="marquee"
+                    android:fontFamily="sans-serif"
+                    android:gravity="left"
+                    android:paddingLeft="10dp"
+                    android:shadowColor="@color/white"
+                    android:singleLine="true"
+                    android:text="暂无信息"
+                    android:textColor="@color/white"
+                    android:textSize="25dp" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/clock"
+                    android:layout_width="150dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center|right"
+                    android:gravity="right"
+                    android:maxLines="1"
+                    android:paddingRight="15dp"
+                    android:shadowColor="@color/white"
+                    android:text="00:00"
+                    android:textColor="@android:color/white"
+                    android:textSize="25dp"
+                    android:textStyle="normal"
+                    android:visibility="visible" />
+
+            </androidx.appcompat.widget.LinearLayoutCompat>
+
+            <androidx.appcompat.widget.LinearLayoutCompat
+                android:id="@+id/ll_line2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:paddingBottom="1dp">
+
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/number"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|center"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="20dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/channel_num_bg"
+                    android:ellipsize="marquee"
+                    android:fontFamily="sans-serif"
+                    android:gravity="center"
+                    android:paddingLeft="2dp"
+                    android:paddingTop="1dp"
+                    android:paddingRight="2dp"
+                    android:paddingBottom="1dp"
+                    android:textColor="@color/white"
+                    android:textSize="15sp"
+                    android:visibility="visible"
+                    tools:text="005" />
+
+                <com.fongmi.android.tv.ui.custom.MarqueeTextView
+                    android:id="@+id/name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|center"
+                    android:layout_marginEnd="20dp"
+                    android:layout_marginRight="3dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/channel_num_bg"
+                    android:ellipsize="marquee"
+                    android:fontFamily="sans-serif"
+                    android:gravity="center"
+                    android:marqueeRepeatLimit="marquee_forever"
+                    android:paddingLeft="2dp"
+                    android:paddingTop="1dp"
+                    android:paddingRight="2dp"
+                    android:paddingBottom="1dp"
+                    android:shadowColor="@color/white"
+                    android:text="民視 1"
+                    android:textColor="@color/white"
+                    android:textSize="15sp" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/size"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|center"
+                    android:layout_marginEnd="20dp"
+                    android:layout_marginRight="3dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/channel_num_bg"
+                    android:fontFamily="sans-serif"
+                    android:gravity="center"
+                    android:paddingLeft="2dp"
+                    android:paddingTop="1dp"
+                    android:paddingRight="2dp"
+                    android:paddingBottom="1dp"
+                    android:shadowColor="@color/white"
+                    android:text="1920 x 1080"
+                    android:textColor="@color/white"
+                    android:textSize="15dp" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/line"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|center"
+                    android:layout_weight="1"
+                    android:background="@drawable/channel_num_bg"
+                    android:fontFamily="sans-serif"
+                    android:gravity="center"
+                    android:paddingLeft="2dp"
+                    android:paddingTop="1dp"
+                    android:paddingRight="2dp"
+                    android:paddingBottom="1dp"
+                    android:shadowColor="@color/white"
+                    android:text="来源 1"
+                    android:textColor="@color/white"
+                    android:textSize="15dp" />
+            </androidx.appcompat.widget.LinearLayoutCompat>
+
+            <androidx.appcompat.widget.LinearLayoutCompat
+                android:id="@+id/ll_line3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:paddingBottom="1dp">
+
+                <com.fongmi.android.tv.ui.custom.MarqueeTextView
+                    android:id="@+id/tv_next_program_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10sp"
+                    android:layout_marginLeft="10sp"
+                    android:layout_marginEnd="15sp"
+                    android:layout_marginRight="15sp"
+                    android:ellipsize="marquee"
+                    android:marqueeRepeatLimit="marquee_forever"
+                    android:paddingRight="15sp"
+                    android:singleLine="true"
+                    android:text="暂无信息"
+                    android:textColor="@color/white"
+                    android:textSize="15sp" />
+
+            </androidx.appcompat.widget.LinearLayoutCompat>
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 </FrameLayout>

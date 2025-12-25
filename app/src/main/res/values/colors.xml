@@ -26,4 +26,10 @@
     <color name="white_80">#CCFFFFFF</color>
     <color name="white_90">#E6FFFFFF</color>
 
+    <color name="color_theme">#F80000</color>
+    <color name="color_theme_80">#CCF80000</color>
+    <color name="color_theme_70">#B3F80000</color>
+    <color name="color_theme_60">#99F80000</color>
+    <color name="color_theme_50">#80F80000</color>
+    <color name="color_theme_40">#66F80000</color>
 </resources>

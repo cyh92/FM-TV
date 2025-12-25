@@ -1,5 +1,5 @@
 # 影視
-
+海信专用包名：com.hisen.android.tv
 ### 基於 CatVod 項目
 
 https://github.com/CatVodTVOfficial/CatVodTVJarLoader
@@ -33,6 +33,19 @@ https://github.com/CatVodTVOfficial/CatVodTVJarLoader
 | click    | none  | 點擊js  | javascript |
 | catchup  | none  | 回看參數  |            |
 | timeZone | none  | 時區    |            |
+
+### 回看配置
+```json
+{
+  "catchup": {  
+     "type": "append", 
+     "replace": "livemode=1,livemode=4", 
+     "source": "&starttime=${(b)yyyyMMdd'T'HHmm}00.00Z&endtime=${(e)yyyyMMdd'T'HHmm}00.00Z"  }
+}
+```
+type：追加回看参数
+replace：将URL中的livemode=1替换为livemode=4实现回看
+source：时间参数格式，${(b)}是开始时间，${(e)}是结束时间
 
 ### 樣式
 

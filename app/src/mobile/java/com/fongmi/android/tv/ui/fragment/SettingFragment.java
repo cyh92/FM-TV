@@ -92,7 +92,7 @@ public class SettingFragment extends BaseFragment implements ConfigCallback, Sit
         mBinding.vodUrl.setText(VodConfig.getDesc());
         mBinding.liveUrl.setText(LiveConfig.getDesc());
         mBinding.wallUrl.setText(WallConfig.getDesc());
-        mBinding.versionText.setText(BuildConfig.VERSION_NAME);
+        mBinding.versionText.setText(BuildConfig.FLAVOR_mode + "-"+ BuildConfig.FLAVOR_abi+"_"+BuildConfig.VERSION_NAME);
         setOtherText();
         setCacheText();
     }

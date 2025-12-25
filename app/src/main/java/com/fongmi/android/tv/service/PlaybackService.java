@@ -9,7 +9,9 @@ import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.support.v4.media.MediaMetadataCompat;
 
 import androidx.annotation.DrawableRes;
@@ -119,7 +121,26 @@ public class PlaybackService extends Service {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onActionEvent(ActionEvent event) {
-        if (event.isUpdate()) Notify.show(buildNotification());
+        if (!event.isUpdate()) return;
+
+        if (isHyperOS()) {
+            getManager().cancel(Notify.ID);
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                ServiceCompat.startForeground(this, Notify.ID, buildNotification(), getType());
+            }, 150);
+        } else {
+            Notify.show(buildNotification());
+        }
+    }
+
+    private boolean isHyperOS() {
+        return Build.MANUFACTURER.equalsIgnoreCase("Xiaomi");
+        // &&Build.VERSION.INCREMENTAL != null && Build.VERSION.INCREMENTAL.contains("V");
+    }
+
+    private int getType() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ?
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0;
     }
 
     @Override

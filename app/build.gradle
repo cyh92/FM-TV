@@ -16,8 +16,8 @@ android {
         minSdk 24
         //noinspection ExpiredTargetSdkVersion
         targetSdk 28
-        versionCode 499
-        versionName "4.9.9"
+        versionCode 503
+        versionName "5.0.3"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString(), "eventBusIndex": "com.fongmi.android.tv.event.EventIndex"]
@@ -58,6 +58,9 @@ android {
     }
 
     packagingOptions {
+//        jniLibs {
+//            useLegacyPackaging true
+//        }
         resources {
             exclude 'META-INF/beans.xml'
             exclude 'META-INF/versions/9/OSGI-INF/MANIFEST.MF'
@@ -95,21 +98,6 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.core:core-splashscreen:1.2.0'
     implementation 'androidx.media:media:1.7.1'
-    implementation 'androidx.media3:media3-common:' + media3Version
-    implementation 'androidx.media3:media3-container:' + media3Version
-    implementation 'androidx.media3:media3-database:' + media3Version
-    implementation 'androidx.media3:media3-datasource:' + media3Version
-    implementation 'androidx.media3:media3-datasource-okhttp:' + media3Version
-    implementation 'androidx.media3:media3-datasource-rtmp:' + media3Version
-    implementation 'androidx.media3:media3-decoder:' + media3Version
-    implementation 'androidx.media3:media3-effect:' + media3Version
-    implementation 'androidx.media3:media3-exoplayer:' + media3Version
-    implementation 'androidx.media3:media3-exoplayer-dash:' + media3Version
-    implementation 'androidx.media3:media3-exoplayer-hls:' + media3Version
-    implementation 'androidx.media3:media3-exoplayer-rtsp:' + media3Version
-    implementation 'androidx.media3:media3-exoplayer-smoothstreaming:' + media3Version
-    implementation 'androidx.media3:media3-extractor:' + media3Version
-    implementation 'androidx.media3:media3-ui:' + media3Version
     implementation 'androidx.palette:palette:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.room:room-runtime:2.8.4'
@@ -123,6 +111,7 @@ dependencies {
     implementation 'com.github.bumptech.glide:avif-integration:' + glideVersion
     implementation 'com.github.bumptech.glide:okhttp3-integration:' + glideVersion
     implementation 'com.github.jahirfiquitiva:TextDrawable:1.0.3'
+    implementation 'com.github.mcxinyu:LibRtmp-Client-for-Android:v3.2.0.m2'
     implementation 'com.github.teamnewpipe:NewPipeExtractor:v0.24.8'
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'com.guolindev.permissionx:permissionx:1.8.1'
@@ -145,4 +134,6 @@ dependencies {
     annotationProcessor 'com.github.bumptech.glide:compiler:' + glideVersion
     annotationProcessor 'org.greenrobot:eventbus-annotation-processor:3.3.1'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
+
+    implementation 'com.tencent.tbs:tbssdk:44286'
 }

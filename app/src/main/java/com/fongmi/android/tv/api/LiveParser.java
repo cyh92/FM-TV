@@ -130,12 +130,13 @@ public class LiveParser {
             if (split.length > 1 && split[1].contains("://")) {
                 Group group = live.getGroups().get(live.getGroups().size() - 1);
                 Channel channel = group.find(Channel.create(split[0]));
-                for (String url : split[1].split("#")) {
-                    String[] parts = url.split("\\|", 2);
+                //因webview模式下部分网址中带#的单页面会影响url分割
+//                for (String url : split[1].split("#")) {
+                    String[] parts = split[1].split("\\|", 2);
                     if (parts.length > 1) setting.headers(parts[1]);
                     channel.getUrls().add(parts[0]);
                     setting.copy(channel);
-                }
+//                }
             }
         }
     }

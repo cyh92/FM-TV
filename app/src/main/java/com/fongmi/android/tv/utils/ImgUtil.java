@@ -62,7 +62,10 @@ public class ImgUtil {
             e.printStackTrace();
         }
     }
-
+    public static void load(Context context,String url, int error, CustomTarget<Drawable> target) {
+        if (TextUtils.isEmpty(url)) target.onLoadFailed(ResUtil.getDrawable(error));
+//        else Glide.with(App.get()).asDrawable().load(getUrl(url)).error(error).skipMemoryCache(true).dontAnimate().signature(getSignature(url)).into(target);
+    }
     public static void load(String text, String url, ImageView view) {
         load(text, url, view, true);
     }

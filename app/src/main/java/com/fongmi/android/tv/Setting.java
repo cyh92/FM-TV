@@ -115,7 +115,7 @@ public class Setting {
     }
 
     public static int getSiteMode() {
-        return Prefers.getInt("site_mode");
+        return Prefers.getInt("site_mode",1);
     }
 
     public static void putSiteMode(int mode) {
@@ -292,5 +292,35 @@ public class Setting {
 
     public static boolean hasFileManager() {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && (new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + App.get().getPackageName())).resolveActivity(App.get().getPackageManager()) != null || new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).resolveActivity(App.get().getPackageManager()) != null);
+    }
+
+    //嗅探内核设置
+    public static void putParseWebView(int key) {
+        Prefers.put("parse_webview", key);
+    }
+    public static int getParseWebView() {
+        return Prefers.getInt("parse_webview", 0);
+    }
+    //首页最近观看显示/隐藏
+    public static boolean isHomeHistory() {
+        return Prefers.getBoolean("home_history", false);
+    }
+    public static void putHomeHistory(boolean show) {
+        Prefers.put("home_history", show);
+    }
+
+    //开机自启动
+    public static boolean isAutoStart() {
+        return Prefers.getBoolean("auto_start", false);
+    }
+    public static void putAutoStart(boolean start) {
+        Prefers.put("auto_start", start);
+    }
+    //首页UI风格
+    public static void putHomeUI(int key) {
+        Prefers.put("home_ui", key);
+    }
+    public static int getHomeUI() {
+        return Prefers.getInt("home_ui", 0);
     }
 }

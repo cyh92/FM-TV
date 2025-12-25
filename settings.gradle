@@ -23,3 +23,5 @@ include ':catvod'
 include ':chaquo'
 include ':quickjs'
 rootProject.name = "TV"
+// gradle.ext.androidxMediaModulePrefix = 'media3-'
+// apply from: file("../media/core_settings.gradle")

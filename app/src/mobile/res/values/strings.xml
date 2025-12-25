@@ -16,9 +16,6 @@
     <string name="menu_site">Site</string>
     <string name="menu_reset">Reset</string>
 
-    <!-- Vod -->
-    <string name="vod_home">Home</string>
-
     <!-- Detail -->
     <string name="detail_flag">Flag</string>
     <string name="detail_episode">Episode</string>

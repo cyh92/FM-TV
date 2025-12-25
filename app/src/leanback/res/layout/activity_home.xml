@@ -48,6 +48,18 @@
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 
+    <com.fongmi.android.tv.ui.custom.CustomHorizontalGridView
+        android:id="@+id/tabMenu"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginBottom="12dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:paddingStart="24dp"
+        android:paddingEnd="12dp"
+        app:focusOutEnd="true"
+        app:focusOutFront="true" />
+
     <com.fongmi.android.tv.ui.custom.ProgressLayout
         android:id="@+id/progressLayout"
         android:layout_width="match_parent"
