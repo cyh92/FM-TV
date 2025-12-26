@@ -1,5 +1,5 @@
 # 影視
-海信专用包名：com.hisen.android.tv
+海信专用包名：com.hisense.android.tv
 ### 基於 CatVod 項目
 
 https://github.com/CatVodTVOfficial/CatVodTVJarLoader
