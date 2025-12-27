@@ -13,7 +13,6 @@ import androidx.media3.common.PlaybackException;
 import androidx.media3.common.util.Util;
 import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
-import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.LoadControl;
 import androidx.media3.exoplayer.RenderersFactory;
 import androidx.media3.exoplayer.source.MediaSource;
@@ -32,6 +31,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
+import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory;
+
+//import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory;
 
 public class ExoUtil {
 
@@ -55,7 +58,9 @@ public class ExoUtil {
     }
 
     public static RenderersFactory buildRenderersFactory(int renderMode) {
-        return new DefaultRenderersFactory(App.get()).setEnableDecoderFallback(true).setExtensionRendererMode(renderMode);
+//         return new DefaultRenderersFactory(App.get()).setEnableDecoderFallback(true).setExtensionRendererMode(renderMode);
+//        return new NextRenderersFactory(App.get()).setAudioPrefer(Setting.isAudioPrefer()).setVideoPrefer(Setting.isVideoPrefer()).setEnableDecoderFallback(true).setExtensionRendererMode(renderMode);
+        return new NextRenderersFactory(App.get()).setEnableDecoderFallback(true).setExtensionRendererMode(renderMode);
     }
 
     public static MediaSource.Factory buildMediaSourceFactory() {
