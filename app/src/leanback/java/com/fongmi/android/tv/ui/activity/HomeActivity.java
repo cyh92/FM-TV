@@ -188,7 +188,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             mAdapter.remove("progress");
             addVideo(mResult = result);
             Cache.clear().put(result);
-            setTypes();
+//            setTypes();
         });
     }
     private void setHomeUI() {

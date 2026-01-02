@@ -313,9 +313,9 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void setWidth(Epg epg) {
-        int padding = ResUtil.dp2px(40);
+        int padding = ResUtil.dp2px(48);
         if (epg.getList().isEmpty()) return;
-        int minWidth = ResUtil.getTextWidth(epg.getList().get(0).getTime(), 14);
+        int minWidth = ResUtil.getTextWidth(epg.getList().get(0).getTime(), 12);
         if (epg.getWidth() == 0) for (EpgData item : epg.getList()) epg.setWidth(Math.max(epg.getWidth(), ResUtil.getTextWidth(item.getTitle(), 14)));
         int width = epg.getWidth() == 0 ? 0 : Math.min(Math.max(epg.getWidth(), minWidth) + padding, ResUtil.getScreenWidth() / 2);
         setWidth(mBinding.epgData, width);
