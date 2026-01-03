@@ -188,7 +188,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             mAdapter.remove("progress");
             addVideo(mResult = result);
             Cache.clear().put(result);
-//            setTypes();
+            setTypes();
         });
     }
     private void setHomeUI() {
@@ -220,8 +220,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         return items;
     }
     public void setTypes() {
-        mResult.setTypes(getTypes(mResult));
-        for (Map.Entry<String, List<Filter>> entry : mResult.getFilters().entrySet()) Prefers.put("filter_" + getHome().getKey() + "_" + entry.getKey(), App.gson().toJson(entry.getValue()));
+        for (Map.Entry<String, List<Filter>> entry : mResult.getFilters().entrySet())
+            Prefers.put("filter_" + getHome().getKey() + "_" + entry.getKey(), App.gson().toJson(entry.getValue()));
         for (Class item : mResult.getTypes()) item.setFilters(getFilter(item.getTypeId()));
         if (mTabAdapter.size() > 1) mTabAdapter.removeItems(1, mTabAdapter.size() - 1);
         if (mResult.getTypes().size() > 0) mTabAdapter.addAll(1, mResult.getTypes());
