@@ -211,14 +211,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         home.setTypeName(ResUtil.getString(R.string.vod_home));
         mTabAdapter.add(home);
     }
-
-    private List<Class> getTypes(Result result) {
-        List<Class> items = new ArrayList<>();
-        for (String cate : getHome().getCategories())
-            for (Class item : result.getTypes())
-                if (cate.equals(item.getTypeName())) items.add(item);
-        return items;
-    }
     public void setTypes() {
         for (Map.Entry<String, List<Filter>> entry : mResult.getFilters().entrySet())
             Prefers.put("filter_" + getHome().getKey() + "_" + entry.getKey(), App.gson().toJson(entry.getValue()));
@@ -523,8 +515,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     public void setSite(Site item) {
-        VodConfig.get().setHome(item);
-        getVideo();
+        //禁用左右键切换首页站点源
+//        VodConfig.get().setHome(item);
+//        getVideo();
     }
 
     @Override

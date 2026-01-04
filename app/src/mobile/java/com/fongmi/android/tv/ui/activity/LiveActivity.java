@@ -477,7 +477,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void showUI() {
-        if (isVisible(mBinding.recycler)) return;
+        if (isVisible(mBinding.recycler) || mGroupAdapter.getItemCount() == 0) return;
         mBinding.recycler.setVisibility(View.VISIBLE);
         mBinding.channel.requestFocus();
         setPosition();
@@ -800,9 +800,11 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void resetAdapter() {
+        mBinding.control.action.line.setVisibility(View.GONE);
         mBinding.channel.getLayoutParams().width = 0;
         mBinding.epgData.getLayoutParams().width = 0;
         mBinding.group.getLayoutParams().width = 0;
+        mBinding.control.title.setText("");
         mEpgDataAdapter.clear();
         mChannelAdapter.clear();
         mGroupAdapter.clear();
@@ -850,6 +852,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         if (item.isActivated()) item.getGroups().clear();
         LiveConfig.get().setHome(item);
         mPlayers.reset();
+        mPlayers.clear();
         mPlayers.stop();
         resetAdapter();
         hideControl();
