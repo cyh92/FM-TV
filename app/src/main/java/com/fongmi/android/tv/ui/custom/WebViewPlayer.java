@@ -1,51 +1,32 @@
 package com.fongmi.android.tv.ui.custom;
 
-import static com.tencent.smtt.sdk.WebSettings.*;
-
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Build;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
-import android.view.ViewGroup;
-import android.view.ViewParent;
-
-//import android.webkit.WebChromeClient;
-//import android.webkit.WebSettings;
-//import android.webkit.WebView;
-//import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 
 import com.fongmi.android.tv.bean.Result;
-import com.tencent.smtt.export.external.interfaces.IX5WebChromeClient;
 import com.tencent.smtt.sdk.WebChromeClient;
 import com.tencent.smtt.sdk.WebSettings;
 import com.tencent.smtt.sdk.WebView;
 import com.tencent.smtt.sdk.WebViewClient;
 
-import com.fongmi.android.tv.bean.Channel;
 import com.orhanobut.logger.Logger;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 
 public class WebViewPlayer extends FrameLayout {
 
     private static final String TAG = "WebViewPlayer";
     public WebView webView;
     private ProgressBar progressBar;
-    private View touchInterceptor;
     private boolean isUserInteractionEnabled = false; // 默认禁用用户交互
     private VideoPlayerCallback callback;
-    private boolean isVideoDetected = false;
     
     public interface VideoPlayerCallback {
         void onPageStarted();
@@ -66,11 +47,14 @@ public class WebViewPlayer extends FrameLayout {
         init(context);
     }
     public void start(Result result) {
-        isVideoDetected = false;
+        if (result == null || result.getUrl() == null) {
+            Logger.t(TAG).e("Invalid result: result or URL is null");
+            return;
+        }
         Logger.t(TAG).d("Starting WebView with URL: " + result.getUrl());
         Logger.t(TAG).d("用户交互状态: " + (isUserInteractionEnabled ? "启用" : "禁用"));
         Logger.t(TAG).d("触摸透明状态: " + isTouchTransparent());
-        
+
         webView.loadUrl(result.getUrl().v(), result.getHeader());
         // 添加显示动画
         webView.setAlpha(0f);
@@ -83,20 +67,17 @@ public class WebViewPlayer extends FrameLayout {
             injectDisableInteractionScript();
         }
     }
-    
-    public void stop(){
-        isVideoDetected = false;
-        webView.stopLoading();
-        webView.loadUrl("about:blank");
+
+    public void stop() {
+        if (webView != null) {
+            webView.stopLoading();
+            webView.loadUrl("about:blank");
+        }
         Logger.t(TAG).d("WebView stopped");
     }
-    
+
     public void setCallback(VideoPlayerCallback callback) {
         this.callback = callback;
-    }
-    
-    public boolean isVideoDetected() {
-        return isVideoDetected;
     }
     private void init(Context context) {
         initWebView(context);
@@ -222,7 +203,6 @@ public class WebViewPlayer extends FrameLayout {
     private void initTouchInterceptor(Context context) {
         // 简化实现：不再需要额外的触摸拦截器
         // 直接通过WebViewPlayer的onTouchEvent处理
-        touchInterceptor = null;
     }
 
     private void addViewsToLayout() {

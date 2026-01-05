@@ -112,6 +112,13 @@ source：时间参数格式，${(b)}是开始时间，${(e)}是结束时间
 
 ### API
 
+播放控制
+
+type 包含 stop、prev、next、loop、play、pause、replay
+```
+http://127.0.0.1:9978/action?do=control&type=next
+```
+
 刷新詳情
 
 ```

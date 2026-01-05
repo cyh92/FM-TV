@@ -1143,12 +1143,18 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onActionEvent(ActionEvent event) {
         if (isRedirect()) return;
-        if (ActionEvent.PLAY.equals(event.getAction()) || ActionEvent.PAUSE.equals(event.getAction())) {
-            mBinding.control.play.performClick();
+        if (ActionEvent.PLAY.equals(event.getAction())) {
+            onPlay();
+        } else if (ActionEvent.PAUSE.equals(event.getAction())) {
+            onPaused();
         } else if (ActionEvent.NEXT.equals(event.getAction())) {
-            mBinding.control.next.performClick();
+            checkNext();
         } else if (ActionEvent.PREV.equals(event.getAction())) {
-            mBinding.control.prev.performClick();
+            checkPrev();
+        } else if (ActionEvent.LOOP.equals(event.getAction())) {
+            onLoop();
+        } else if (ActionEvent.REPLAY.equals(event.getAction())) {
+            onReset(true);
         } else if (ActionEvent.AUDIO.equals(event.getAction())) {
             moveTaskToBack(true);
             setAudioOnly(true);
@@ -1259,11 +1265,6 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onErrorEvent(ErrorEvent event) {
         if (!event.getTag().equals(tag)) return;
-        if (mPlayers.retried()) onError(event);
-        else onRefresh();
-    }
-
-    private void onError(ErrorEvent event) {
         mBinding.swipeLayout.setEnabled(true);
         Track.delete(mPlayers.getUrl());
         showError(event.getMsg());

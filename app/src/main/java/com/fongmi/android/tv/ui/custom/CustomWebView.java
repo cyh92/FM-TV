@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.view.ViewGroup;
+import android.view.View;
 //import android.webkit.SslErrorHandler;
 //import android.webkit.WebResourceRequest;
 //import android.webkit.WebResourceResponse;
@@ -51,6 +52,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 public class CustomWebView extends WebView implements DialogInterface.OnDismissListener {
@@ -60,14 +63,17 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     private static final Pattern PLAYER = Pattern.compile("player.*https?://");
     private static final String BLANK = "about:blank";
     private static final int MAX_URLS = 5;
+    private static final long DIALOG_TIMEOUT = 60000; // 对话框超时时间: 60秒
 
-    private LinkedHashSet<String> urls;
-    private WebResourceResponse empty;
+    private final LinkedHashSet<String> urls;
+    private final WebResourceResponse empty;
+    private final AtomicBoolean stop;
+    private final ReentrantLock urlsLock;
     private ParseCallback callback;
     private WebDialog dialog;
     private Runnable timer;
+    private Runnable dialogTimer;
     private boolean detect;
-    private boolean stop;
     private String click;
     private String from;
     private String key;
@@ -80,6 +86,12 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
 
     private CustomWebView(@NonNull Context context) {
         super(context);
+        stop = new AtomicBoolean(false);
+        urls = new LinkedHashSet<>();
+        urlsLock = new ReentrantLock();
+        empty = new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream("".getBytes()));
+        timer = () -> stop(true);
+        dialogTimer = () -> stop(true);
         initSettings();
         showTbs();
     }
@@ -93,9 +105,6 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     }
     @SuppressLint("SetJavaScriptEnabled")
     public void initSettings() {
-        timer = () -> stop(true);
-        urls = new LinkedHashSet<>();
-        empty = new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream("".getBytes()));
         WebSettings setting = getSettings();
         setting.setSupportZoom(true);
         setting.setUseWideViewPort(true);
@@ -185,8 +194,13 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
         };
     }
     private boolean addUrl(String url) {
-        if (urls.size() > MAX_URLS) urls.clear();
-        return urls.add(url);
+        urlsLock.lock();
+        try {
+            if (urls.size() > MAX_URLS) urls.clear();
+            return urls.add(url);
+        } finally {
+            urlsLock.unlock();
+        }
     }
 
     private void showDialog() {
@@ -194,6 +208,7 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
         if (getParent() != null) ((ViewGroup) getParent()).removeView(this);
         dialog = new WebDialog(this).show();
         App.removeCallbacks(timer);
+        App.post(dialogTimer, DIALOG_TIMEOUT); // 对话框也设置超时
     }
 
     private void hideDialog() {
@@ -207,7 +222,9 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     }
 
     private List<String> getScript(String url) {
-        List<String> script = new ArrayList<>(Sniffer.getScript(Uri.parse(url)));
+        List<String> scripts = Sniffer.getScript(Uri.parse(url));
+        if (scripts == null) scripts = new ArrayList<>();
+        List<String> script = new ArrayList<>(scripts);
         if (TextUtils.isEmpty(click) || script.contains(click)) return script;
         script.add(0, click);
         return script;
@@ -235,7 +252,8 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
             Spider spider = VodConfig.get().getSite(key).spider();
             if (spider.manualVideoCheck()) return spider.isVideoFormat(url);
             return Sniffer.isVideoFormat(url);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            SpiderDebug.log(TAG, "isVideoFormat error: %s", e.getMessage());
             return Sniffer.isVideoFormat(url);
         }
     }
@@ -245,9 +263,10 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     }
 
     private void onParseSuccess(Map<String, String> headers, String url) {
-        if (callback != null) callback.onParseSuccess(headers, url, from);
+        ParseCallback cb = callback; // 保存引用
+        callback = null; // 先置空,防止并发问题
+        if (cb != null) cb.onParseSuccess(headers, url, from);
         post(() -> stop(false));
-        callback = null;
     }
 
     private void onParseError() {
@@ -256,13 +275,20 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     }
 
     public void stop(boolean error) {
-        if (stop) return;
-        stop = true;
-        hideDialog();
-        stopLoading();
-        loadUrl(BLANK);
-        App.removeCallbacks(timer);
-        if (error) onParseError();
-        else callback = null;
+        if (stop.get()) return;
+        if (stop.compareAndSet(false, true)) {
+            hideDialog();
+            stopLoading();
+            loadUrl(BLANK);
+            App.removeCallbacks(timer);
+            App.removeCallbacks(dialogTimer);
+            if (error) onParseError();
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        stop(true); // 确保在视图分离时清理资源
     }
 }

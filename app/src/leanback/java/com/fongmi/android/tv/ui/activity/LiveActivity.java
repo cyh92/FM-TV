@@ -768,9 +768,6 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     private void resetAdapter() {
         mBinding.control.line.setVisibility(View.GONE);
-        mBinding.channel.getLayoutParams().width = 0;
-        mBinding.epgData.getLayoutParams().width = 0;
-        mBinding.group.getLayoutParams().width = 0;
         mBinding.widget.title.setText("");
         mEpgDataAdapter.clear();
         mChannelAdapter.clear();
@@ -848,8 +845,10 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onActionEvent(ActionEvent event) {
-        if (ActionEvent.PLAY.equals(event.getAction()) || ActionEvent.PAUSE.equals(event.getAction())) {
-            checkPlay();
+        if (ActionEvent.PLAY.equals(event.getAction())) {
+            onPlay();
+        } else if (ActionEvent.PAUSE.equals(event.getAction())) {
+            onPaused();
         } else if (ActionEvent.NEXT.equals(event.getAction())) {
             nextChannel();
         } else if (ActionEvent.PREV.equals(event.getAction())) {
@@ -928,11 +927,6 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onErrorEvent(ErrorEvent event) {
         if (!event.getTag().equals(tag)) return;
-        if (mPlayers.retried()) onError(event);
-        else fetch();
-    }
-
-    private void onError(ErrorEvent event) {
         Track.delete(mPlayers.getUrl());
         showError(event.getMsg());
         mPlayers.resetTrack();
