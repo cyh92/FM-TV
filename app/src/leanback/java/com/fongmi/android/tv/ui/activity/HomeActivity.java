@@ -149,6 +149,14 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 if (mPresenter.isDelete()) setHistoryDelete(false);
             }
         });
+        mBinding.tabMenu.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
+            @Override
+            public void onChildViewHolderSelected(@NonNull RecyclerView parent, @Nullable RecyclerView.ViewHolder child, int position, int subposition) {
+                if (child != null && position != 0) {
+                    VodActivity.start(HomeActivity.this, mResult);
+                }
+            }
+        });
     }
 
     private void checkAction(Intent intent) {
@@ -288,7 +296,11 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private void setFocus() {
         mBinding.title.setSelected(true);
         App.post(() -> mBinding.title.setFocusable(true), 500);
-        if (!mBinding.title.hasFocus()) mBinding.recycler.requestFocus();
+        if (Setting.getHomeUI() == 1) {
+            mBinding.tabMenu.requestFocus();
+        } else if (!mBinding.title.hasFocus()) {
+            mBinding.recycler.requestFocus();
+        }
     }
 
     private void getVideo() {
@@ -575,9 +587,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     public void onItemClick(Class item) {
-        if (!"home".equals(item.getTypeId())) {
-            VodActivity.start(this, mResult);
-        }
+
     }
 
     @Override
