@@ -527,9 +527,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     public void setSite(Site item) {
-        //禁用左右键切换首页站点源
-//        VodConfig.get().setHome(item);
-//        getVideo();
+        VodConfig.get().setHome(item);
+        getVideo();
     }
 
     @Override
