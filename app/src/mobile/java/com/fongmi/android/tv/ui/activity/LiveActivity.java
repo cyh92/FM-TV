@@ -1234,7 +1234,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     @Override
     protected void onPause() {
         super.onPause();
-        if (isRedirect()) onPaused();
+        if (isRedirect()) mPlayers.stop();
     }
 
     @Override
