@@ -72,6 +72,7 @@ Vod 配置為一個 JSON 物件，作為應用程式的主要配置入口。配�
 | `searchable`  | `integer`       | 搜尋開關。`0`=停用，`1`=啟用（預設）。                   |
 | `changeable`  | `integer`       | 線路切換開關。`0`=停用，`1`=啟用（預設）。                 |
 | `quickSearch` | `integer`       | 快速搜尋開關。`0`=停用，`1`=啟用。                     |
+| `indexs`      | `integer`       | 索引模式旗標。`1` 表示此來源作為索引來源使用。                 |
 | `categories`  | `array<string>` | 顯示的分類名稱白名單，僅顯示清單中的分類。                     |
 | `header`      | `object`        | 此來源請求時附加的 HTTP 標頭，格式為鍵值對。                 |
 | `style`       | `Style`         | 卡片顯示樣式。詳見 [style](#style--卡片樣式)。          |
@@ -198,7 +199,7 @@ Live 配置可以是獨立的 JSON 檔案，或內嵌於 Vod 配置的 `lives` �
 | `catchup`  | `Catchup`      | 追看/時移設定，作為此來源所有頻道的預設值。詳見 [catchup](#catchup--追看時移)。                                                 |
 | `groups`   | `array<Group>` | 直播頻道分組清單（內嵌方式）。詳見 [groups](#groups--頻道分組)。                                                          |
 | `boot`     | `boolean`      | 是否在應用啟動時自動選中此直播來源。多個來源設定時，最後一個生效。                                                                   |
-| `pass`     | `boolean`      | `true` 表示略過此直播來源的載入。                                                                                |
+| `pass`     | `boolean`      | `true` 表示略過密碼保護，強制顯示此來源所有分組（含設有密碼的隱藏分組）。                                                            |
 
 ### 回看配置
 ```json
@@ -266,24 +267,24 @@ source：时间参数格式，${(b)}是开始时间，${(e)}是结束时间
 
 `channel` 為 `Channel` 物件陣列，每個物件代表一個直播頻道。
 
-| 欄位        | 類型              | 說明                                                      |
-|-----------|-----------------|---------------------------------------------------------|
-| `name`    | `string`        | 頻道顯示名稱。                                                 |
-| `urls`    | `array<string>` | 頻道播放 URL 清單，支援多個備用線路，依序嘗試。                              |
-| `number`  | `string`        | 頻道號碼（顯示用）。                                              |
-| `logo`    | `string`        | 頻道 Logo 圖片 URL，覆蓋來源預設值。                                 |
-| `epg`     | `string`        | 此頻道專屬 EPG URL，覆蓋來源預設 EPG。                               |
-| `ua`      | `string`        | 此頻道播放請求的 User-Agent，覆蓋來源預設值。                            |
-| `click`   | `string`        | 點擊攔截處理。                                                 |
-| `format`  | `string`        | 指定媒體格式（如 `"m3u8"`、`"flv"`）。                             |
-| `origin`  | `string`        | 請求 `Origin` 標頭值，覆蓋來源預設值。                                |
-| `referer` | `string`        | 請求 `Referer` 標頭值，覆蓋來源預設值。                               |
-| `tvgId`   | `string`        | TVG 格式 EPG 頻道 ID。                                       |
-| `tvgName` | `string`        | TVG 格式 EPG 頻道名稱。                                        |
-| `header`  | `object`        | 此頻道請求的額外 HTTP 標頭，格式為鍵值對。                                |
-| `parse`   | `integer`       | 是否需要解析此頻道 URL。`0`=不解析，`1`=解析。                           |
-| `catchup` | `Catchup`       | 此頻道的追看/時移設定，覆蓋分組及來源預設值。詳見 [catchup](#catchup--追看時移)。    |
-| `drm`     | `Drm`           | DRM 版權保護設定。欄位同 [playerContent 回傳的 `drm` 物件](SPIDER.md)。 |
+| 欄位        | 類型              | 說明                                                                                                                 |
+|-----------|-----------------|--------------------------------------------------------------------------------------------------------------------|
+| `name`    | `string`        | 頻道顯示名稱。                                                                                                            |
+| `urls`    | `array<string>` | 頻道播放 URL 清單，支援多個備用線路，依序嘗試。每條 URL 可附加 `$線路名稱` 後綴指定顯示名稱（如 `"http://cdn1.example.com/hbo.m3u8$CDN1"`）；省略時自動顯示為「線路 N」。 |
+| `number`  | `string`        | 頻道號碼（顯示用）。                                                                                                         |
+| `logo`    | `string`        | 頻道 Logo 圖片 URL，覆蓋來源預設值。                                                                                            |
+| `epg`     | `string`        | 此頻道專屬 EPG URL，覆蓋來源預設 EPG。                                                                                          |
+| `ua`      | `string`        | 此頻道播放請求的 User-Agent，覆蓋來源預設值。                                                                                       |
+| `click`   | `string`        | 點擊攔截處理。                                                                                                            |
+| `format`  | `string`        | 指定媒體 MIME type，直接傳入播放器。常用值：`"application/x-mpegURL"`（HLS）。                                                         |
+| `origin`  | `string`        | 請求 `Origin` 標頭值，覆蓋來源預設值。                                                                                           |
+| `referer` | `string`        | 請求 `Referer` 標頭值，覆蓋來源預設值。                                                                                          |
+| `tvgId`   | `string`        | TVG 格式 EPG 頻道 ID。                                                                                                  |
+| `tvgName` | `string`        | TVG 格式 EPG 頻道名稱。                                                                                                   |
+| `header`  | `object`        | 此頻道請求的額外 HTTP 標頭，格式為鍵值對。                                                                                           |
+| `parse`   | `integer`       | 是否需要解析此頻道 URL。`0`=不解析，`1`=解析。                                                                                      |
+| `catchup` | `Catchup`       | 此頻道的追看/時移設定，覆蓋分組及來源預設值。詳見 [catchup](#catchup--追看時移)。                                                               |
+| `drm`     | `Drm`           | DRM 版權保護設定。欄位同 [playerContent 回傳的 `drm` 物件](SPIDER.md)。                                                            |
 
 **範例：**
 
@@ -302,7 +303,6 @@ source：时间参数格式，${(b)}是开始时间，${(e)}是结束时间
   },
   "catchup": {
     "type": "append",
-    "days": "7",
     "source": "?playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}"
   }
 }
@@ -471,11 +471,13 @@ scheme://username:password@host:port
 **範例：**
 
 ```json
-"hosts": [
-  "stream.example.com=1.2.3.4",
-  "old.cdn.example.com=new.cdn.example.com",
-  "cache.ott.*.itv.cmvideo.cn=base-v4-free-mghy.e.cdn.chinamobile.com"
-]
+{
+  "hosts": [
+    "stream.example.com=1.2.3.4",
+    "old.cdn.example.com=new.cdn.example.com",
+    "cache.ott.*.itv.cmvideo.cn=base-v4-free-mghy.e.cdn.chinamobile.com"
+  ]
+}
 ```
 
 ---
@@ -491,10 +493,12 @@ scheme://username:password@host:port
 **範例：**
 
 ```json
-"ads": [
-  "ads.example.com",
-  "tracker.example.net"
-]
+{
+  "ads": [
+    "ads.example.com",
+    "tracker.example.net"
+  ]
+}
 ```
 
 ---
@@ -503,20 +507,18 @@ scheme://username:password@host:port
 
 設定頻道的回看/時移功能，可定義在 `Live`（來源層級）或 `Channel`（頻道層級）。
 
-| 欄位        | 類型       | 說明                                                                                                                  |
-|-----------|----------|---------------------------------------------------------------------------------------------------------------------|
-| `type`    | `string` | 時移類型，決定 URL 的組合方式（如 `"append"`、`"shift"`、`"flussonic"`、`"xui"`）。                                                    |
-| `days`    | `string` | 支援回看的天數（如 `"7"`）。                                                                                                   |
-| `regex`   | `string` | 用於提取時間參數的正規表示式。                                                                                                     |
-| `source`  | `string` | 時移 URL 範本。支援 `{(b)格式}`（開始時間）、`{(e)格式}`（結束時間）、`{utc:}`（開始 Unix 秒）、`{utcend:}`（結束 Unix 秒）。非 `default` 類型時結果附加至原始 URL。 |
-| `replace` | `string` | 用於替換 URL 中部分字串的替換字串。                                                                                                |
+| 欄位        | 類型       | 說明                                                                                                      |
+|-----------|----------|---------------------------------------------------------------------------------------------------------|
+| `type`    | `string` | 時移類型。`"append"`（預設）：將格式化後的 `source` 附加至原始 URL 末尾；`"default"`：以格式化後的 `source` 完全替換原始 URL。                |
+| `regex`   | `string` | 判斷此追看設定是否適用於當前 URL 的比對條件（子字串或正規表示式）。未設定時只要 `source` 非空即啟用；設定後只有 URL 符合此條件才啟用追看。                         |
+| `source`  | `string` | 時移 URL 範本，**非空時才啟用追看功能**。支援 `{(b)格式}`（開始時間）、`{(e)格式}`（結束時間）、`{utc:}`（開始 Unix 秒）、`{utcend:}`（結束 Unix 秒）。 |
+| `replace` | `string` | 逗號分隔的替換對（`原字串,新字串`），在組合時移 URL 前先對原始 URL 執行替換。                                                           |
 
 **範例：**
 
 ```json
 {
   "type": "append",
-  "days": "7",
   "source": "?playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}"
 }
 ```
@@ -719,7 +721,6 @@ scheme://username:password@host:port
               ],
               "catchup": {
                 "type": "append",
-                "days": "3",
                 "source": "?playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}"
               }
             }

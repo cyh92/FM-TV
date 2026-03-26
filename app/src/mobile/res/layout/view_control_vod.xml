@@ -49,6 +49,17 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/clock"
+                android:layout_width="70dp"
+                android:layout_height="48dp"
+                android:ellipsize="marquee"
+                android:singleLine="true"
+                android:gravity="center"
+                android:textColor="@color/white"
+                android:textSize="20sp"
+                tools:text="10:00:00" />
+
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/cast"
                 android:layout_width="48dp"

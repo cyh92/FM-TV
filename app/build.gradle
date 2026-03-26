@@ -16,8 +16,8 @@ android {
         minSdk 24
         //noinspection ExpiredTargetSdkVersion
         targetSdk 28
-        versionCode 526
-        versionName "5.2.6"
+        versionCode 529
+        versionName "5.2.9"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString(), "eventBusIndex": "com.fongmi.android.tv.event.EventIndex"]
@@ -36,24 +36,24 @@ android {
         }
         arm64_v8a {
             dimension "abi"
-            ndk { abiFilters "arm64-v8a" }
+            ndk { abiFilters += "arm64-v8a" }
         }
         armeabi_v7a {
             dimension "abi"
-            ndk { abiFilters "armeabi-v7a" }
+            ndk { abiFilters += "armeabi-v7a" }
         }
     }
 
     buildFeatures {
-        buildConfig true
-        viewBinding true
+        buildConfig = true
+        viewBinding = true
     }
 
     buildTypes {
         release {
             minifyEnabled true
             shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-media.pro'
         }
     }
 
@@ -69,7 +69,9 @@ android {
 
     android.applicationVariants.configureEach { variant ->
         variant.outputs.configureEach { output ->
-            outputFileName = "${variant.productFlavors[0].name}-${variant.productFlavors[1].name}.apk"
+            def mode = variant.productFlavors.find { it.dimension == "mode" }
+            def abi = variant.productFlavors.find { it.dimension == "abi" }
+            outputFileName = "${mode.name}-${abi.name}.apk"
         }
     }
 
@@ -80,7 +82,7 @@ android {
     }
 
     lint {
-        disable 'UnsafeOptInUsageError'
+        disable += 'UnsafeOptInUsageError'
     }
 
     compileOptions {
@@ -115,10 +117,10 @@ dependencies {
     implementation 'com.github.teamnewpipe:NewPipeExtractor:v0.26.0'
     implementation 'com.google.android.material:material:1.13.0'
     implementation 'com.guolindev.permissionx:permissionx:1.8.1'
-    implementation 'javax.servlet:javax.servlet-api:3.1.0'
-    implementation 'org.eclipse.jetty:jetty-client:8.1.21.v20160908'
-    implementation('org.eclipse.jetty:jetty-server:8.1.21.v20160908') { exclude group: 'org.eclipse.jetty.orbit', module: 'javax.servlet' }
-    implementation('org.eclipse.jetty:jetty-servlet:8.1.21.v20160908') { exclude group: 'org.eclipse.jetty.orbit', module: 'javax.servlet' }
+    implementation 'javax.servlet:javax.servlet-api:4.0.1'
+    implementation 'org.eclipse.jetty:jetty-client:8.1.22.v20160922'
+    implementation('org.eclipse.jetty:jetty-server:8.1.22.v20160922') { exclude group: 'org.eclipse.jetty.orbit', module: 'javax.servlet' }
+    implementation('org.eclipse.jetty:jetty-servlet:8.1.22.v20160922') { exclude group: 'org.eclipse.jetty.orbit', module: 'javax.servlet' }
     implementation 'org.fourthline.cling:cling-core:2.1.1'
     implementation 'org.fourthline.cling:cling-support:2.1.1'
     implementation 'org.greenrobot:eventbus:3.3.1'

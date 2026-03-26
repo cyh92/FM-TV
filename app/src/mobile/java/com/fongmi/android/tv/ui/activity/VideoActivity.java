@@ -284,7 +284,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         mObserveSearch = this::setSearch;
         mPlayers = Players.create(this);
         mBroken = new ArrayList<>();
-        mClock = Clock.create();
+        mClock = Clock.create(mBinding.control.clock);
         mR1 = this::hideControl;
         mR2 = this::setTraffic;
         mR3 = this::setOrient;
