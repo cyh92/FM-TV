@@ -2,7 +2,6 @@ package com.fongmi.android.tv.player;
 
 import android.net.Uri;
 
-import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.Result;
@@ -16,11 +15,13 @@ import com.fongmi.android.tv.player.extractor.Thunder;
 import com.fongmi.android.tv.player.extractor.Video;
 import com.fongmi.android.tv.player.extractor.WebView;
 import com.fongmi.android.tv.player.extractor.Youtube;
+import com.fongmi.android.tv.utils.Task;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -29,14 +30,6 @@ import java.util.concurrent.TimeUnit;
 public class Source {
 
     private final List<Extractor> extractors;
-
-    private static class Loader {
-        static volatile Source INSTANCE = new Source();
-    }
-
-    public static Source get() {
-        return Loader.INSTANCE;
-    }
 
     public Source() {
         extractors = new ArrayList<>();
@@ -49,6 +42,10 @@ public class Source {
         extractors.add(new Video());
         extractors.add(new Youtube());
         extractors.add(new WebView()); // 添加新解析器
+    }
+
+    public static Source get() {
+        return Loader.INSTANCE;
     }
 
     private Extractor getExtractor(Uri uri) {
@@ -72,7 +69,12 @@ public class Source {
                 List<Callable<List<Episode>>> items = new ArrayList<>();
                 Iterator<Episode> iterator = flag.getEpisodes().iterator();
                 while (iterator.hasNext()) addCallable(iterator, items);
-                for (Future<List<Episode>> future : executor.invokeAll(items, 30, TimeUnit.SECONDS)) flag.getEpisodes().addAll(future.get());
+                for (Future<List<Episode>> future : executor.invokeAll(items, 30, TimeUnit.SECONDS)) {
+                    try {
+                        flag.getEpisodes().addAll(future.get());
+                    } catch (CancellationException ignored) {
+                    }
+                }
             }
         }
     }
@@ -94,7 +96,7 @@ public class Source {
 
     public void exit() {
         if (extractors == null) return;
-        App.execute(() -> extractors.forEach(Extractor::exit));
+        Task.execute(() -> extractors.forEach(Extractor::exit));
     }
 
     public interface Extractor {
@@ -106,5 +108,9 @@ public class Source {
         void stop();
 
         void exit();
+    }
+
+    private static class Loader {
+        static volatile Source INSTANCE = new Source();
     }
 }

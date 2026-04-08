@@ -64,6 +64,7 @@ import com.fongmi.android.tv.ui.custom.CustomMovement;
 import com.fongmi.android.tv.ui.dialog.DanmakuDialog;
 import com.fongmi.android.tv.ui.dialog.DescDialog;
 import com.fongmi.android.tv.ui.dialog.SubtitleDialog;
+import com.fongmi.android.tv.ui.dialog.TitleDialog;
 import com.fongmi.android.tv.ui.dialog.TrackDialog;
 import com.fongmi.android.tv.ui.presenter.ArrayPresenter;
 import com.fongmi.android.tv.ui.presenter.EpisodePresenter;
@@ -79,6 +80,7 @@ import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PartUtil;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Sniffer;
+import com.fongmi.android.tv.utils.Task;
 import com.fongmi.android.tv.utils.Traffic;
 import com.github.bassaer.library.MDColor;
 import com.github.catvod.utils.Trans;
@@ -309,6 +311,7 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
         mBinding.control.scale.setOnClickListener(view -> onScale());
         mBinding.control.speed.setOnClickListener(view -> onSpeed());
         mBinding.control.reset.setOnClickListener(view -> onReset());
+        mBinding.control.title.setOnClickListener(view -> onTitle());
         mBinding.control.player.setOnClickListener(view -> onChoose());
         mBinding.control.decode.setOnClickListener(view -> onDecode());
         mBinding.control.ending.setOnClickListener(view -> onEnding());
@@ -387,9 +390,9 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(SiteViewModel.class);
-        mViewModel.result.observeForever(mObserveDetail);
-        mViewModel.player.observeForever(mObservePlayer);
-        mViewModel.search.observeForever(mObserveSearch);
+        mViewModel.getResult().observeForever(mObserveDetail);
+        mViewModel.getPlayer().observeForever(mObservePlayer);
+        mViewModel.getSearch().observeForever(mObserveSearch);
     }
 
     private void checkCast() {
@@ -845,6 +848,11 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
         hideControl();
     }
 
+    private void onTitle() {
+        TitleDialog.create().player(mPlayers).show(this);
+        hideControl();
+    }
+
     private void onDanmaku() {
         DanmakuDialog.create().player(mPlayers).show(this);
         hideControl();
@@ -985,12 +993,12 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
     private void saveHistory() {
         if (mHistory == null || Setting.isIncognito()) return;
         if (mHistory.getPosition() > 0 && mHistory.getDuration() > 0) {
-            App.execute(() -> mHistory.merge().save());
+            Task.execute(() -> mHistory.merge().save());
         }
     }
 
     private void updateHistory(Episode item) {
-        mHistory.setPosition(item.equals(mHistory.getEpisode()) ? mHistory.getPosition() : C.TIME_UNSET);
+        mHistory.setPosition(item.matchesName(mHistory.getEpisode()) ? mHistory.getPosition() : C.TIME_UNSET);
         mHistory.setVodFlag(getFlag().getFlag());
         mHistory.setVodRemarks(item.getName());
         mHistory.setEpisodeUrl(item.getUrl());
@@ -1116,6 +1124,9 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
                 setTrackVisible();
                 mClock.setCallback(this);
                 break;
+            case PlayerEvent.TITLE:
+                setTitleVisible();
+                break;
             case PlayerEvent.SIZE:
                 mBinding.widget.size.setText(mPlayers.getSizeText());
                 break;
@@ -1141,10 +1152,14 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
         mBinding.control.video.setVisibility(mPlayers.haveTrack(C.TRACK_TYPE_VIDEO) ? View.VISIBLE : View.GONE);
     }
 
+    private void setTitleVisible() {
+        mBinding.control.title.setVisibility(mPlayers.haveTitle() ? View.VISIBLE : View.GONE);
+    }
+
     private void setMetadata() {
         String title = mHistory.getVodName();
         String episode = getEpisode().getName();
-        boolean empty = title.equals(episode) || episode == null;
+        boolean empty = episode.isEmpty() || title.equals(episode);
         String artist = empty ? "" : getString(R.string.play_now, episode);
         mPlayers.setMetadata(title, artist, mHistory.getVodPic());
     }
@@ -1451,9 +1466,9 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
         RefreshEvent.history();
         PlaybackService.stop();
         App.removeCallbacks(mR1, mR2, mR3, mR4);
-        mViewModel.result.removeObserver(mObserveDetail);
-        mViewModel.player.removeObserver(mObservePlayer);
-        mViewModel.search.removeObserver(mObserveSearch);
+        mViewModel.getResult().removeObserver(mObserveDetail);
+        mViewModel.getPlayer().removeObserver(mObservePlayer);
+        mViewModel.getSearch().removeObserver(mObserveSearch);
         super.onDestroy();
     }
 }

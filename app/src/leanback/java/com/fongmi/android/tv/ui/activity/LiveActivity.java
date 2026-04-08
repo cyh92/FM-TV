@@ -238,10 +238,10 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(LiveViewModel.class);
-        mViewModel.url.observeForever(mObserveUrl);
-        mViewModel.xml.observe(this, this::setEpg);
-        mViewModel.epg.observeForever(mObserveEpg);
-        mViewModel.live.observe(this, live -> {
+        mViewModel.url().observeForever(mObserveUrl);
+        mViewModel.xml().observe(this, this::setEpg);
+        mViewModel.epg().observeForever(mObserveEpg);
+        mViewModel.live().observe(this, live -> {
             mViewModel.getXml(live);
             setGroup(live);
             setWidth(live);
@@ -456,9 +456,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     @Override
     public void showEpg(Channel item) {
-        if (mChannel == null || mChannel.getData().getList().isEmpty() || mEpgDataAdapter.size() == 0 || !mChannel.equals(item) || !mChannel.getGroup().equals(mGroup))
-            return;
-        mBinding.epgData.setSelectedPosition(mChannel.getData().getSelected());
+        if (mChannel == null || mChannel.getData(mViewModel.getZoneId()).getList().isEmpty() || mEpgDataAdapter.size() == 0 || !mChannel.equals(item) || !mChannel.getGroup().equals(mGroup)) return;
+        mBinding.epgData.setSelectedPosition(mChannel.getData(mViewModel.getZoneId()).getSelected());
         mBinding.epgData.setVisibility(View.VISIBLE);
         mBinding.channel.setVisibility(View.GONE);
         mBinding.group.setVisibility(View.GONE);
@@ -576,7 +575,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
 
     @Override
     public void onItemClick(Channel item) {
-        if (!item.getData().getList().isEmpty() && item.isSelected() && mChannel != null && mChannel.equals(item) && mChannel.getGroup().equals(mGroup)) {
+        if (!item.getData(mViewModel.getZoneId()).getList().isEmpty() && item.isSelected() && mChannel != null && mChannel.equals(item) && mChannel.getGroup().equals(mGroup)) {
             showEpg(item);
         } else if (mGroup != null) {
             mGroup.setPosition(mBinding.channel.getSelectedPosition());
@@ -599,7 +598,7 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     public void onItemClick(EpgData item) {
         if (item.isSelected()) {
             fetch(item);
-        } else if (mChannel.hasCatchup()) {
+        } else if (mChannel.hasCatchup() || mChannel.isRtsp()) {
             mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getShow(), item.getTitle()));
             Notify.show(getString(R.string.play_ready, item.getTitle()));
             setActivated(item);
@@ -645,24 +644,21 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         mBinding.control.line.setVisibility(mChannel.getLineVisible());
     }
 
-    private void setEpg() {
-        EpgData data = mChannel.getData().getEpgData();
+    private void setEpg(Epg epg) {
+        if (mChannel == null || !mChannel.getTvgId().equals(epg.getKey())) return;
+        EpgData data = epg.getEpgData();
         boolean hasTitle = !data.getTitle().isEmpty();
-        mEpgDataAdapter.setItems(mChannel.getData().getList(), null);
+        mEpgDataAdapter.setItems(epg.getList(), null);
         if (hasTitle) mBinding.widget.title.setText(getString(R.string.detail_title, mChannel.getShow(), data.getTitle()));
         mBinding.widget.name.setMaxEms(hasTitle ? 12 : 48);
         mBinding.widget.play.setText(data.format());
         mBinding.widget.tvNextProgramName.setText(nextProgram());
-        setWidth(mChannel.getData());
+        setWidth(epg);
         setMetadata();
     }
 
     private void setEpg(boolean success) {
         if (mChannel != null && success) mViewModel.getEpg(mChannel);
-    }
-
-    private void setEpg(Epg epg) {
-        if (mChannel != null && mChannel.getTvgId().equals(epg.getKey())) setEpg();
     }
 
     private void fetch(EpgData item) {
@@ -982,10 +978,10 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
     }
 
     private void checkNext() {
-        int current = mChannel.getData().getInRange();
-        int position = mChannel.getData().getSelected() + 1;
+        int current = mChannel.getData(mViewModel.getZoneId()).getInRange();
+        int position = mChannel.getData(mViewModel.getZoneId()).getSelected() + 1;
         boolean hasNext = position <= current && position > 0;
-        if (hasNext) onItemClick(mChannel.getData().getList().get(position));
+        if (hasNext) onItemClick(mChannel.getData(mViewModel.getZoneId()).getList().get(position));
         else fetch();
     }
 
@@ -1178,8 +1174,8 @@ public class LiveActivity extends BaseActivity implements GroupPresenter.OnClick
         mPlayers.release();
         Source.get().exit();
         PlaybackService.stop();
-        mViewModel.url.removeObserver(mObserveUrl);
-        mViewModel.epg.removeObserver(mObserveEpg);
+        mViewModel.url().removeObserver(mObserveUrl);
+        mViewModel.epg().removeObserver(mObserveEpg);
         App.removeCallbacks(mR0, mR1, mR3, mR3, mR4);
         super.onDestroy();
     }

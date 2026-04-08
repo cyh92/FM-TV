@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
+import androidx.media3.common.MediaTitle;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Tracks;
@@ -59,6 +60,7 @@ import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.utils.Task;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.utils.Path;
@@ -79,9 +81,8 @@ import master.flame.danmaku.ui.widget.DanmakuView;
 public class Players implements Player.Listener, ParseCallback {
 
     private static final String TAG = Players.class.getSimpleName();
-
-    public static final int SOFT = 0;
-    public static final int HARD = 1;
+    private static final int SOFT = 0;
+    private static final int HARD = 1;
 
     private final ErrorMsgProvider provider;
     private final AudioManager audioManager;
@@ -109,12 +110,6 @@ public class Players implements Player.Listener, ParseCallback {
     private int decode;
     private int retry;
 
-    public static Players create(Activity activity) {
-        Players player = new Players(activity);
-        Server.get().setPlayer(player);
-        return player;
-    }
-
     private Players(Activity activity) {
         decode = HARD;
         builder = new StringBuilder();
@@ -123,6 +118,12 @@ public class Players implements Player.Listener, ParseCallback {
         formatter = new Formatter(builder, Locale.getDefault());
         audioManager = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
         createSession(activity);
+    }
+
+    public static Players create(Activity activity) {
+        Players player = new Players(activity);
+        Server.get().setPlayer(player);
+        return player;
     }
 
     private void createSession(Activity activity) {
@@ -192,6 +193,14 @@ public class Players implements Player.Listener, ParseCallback {
         setMediaItem();
     }
 
+    public void setTitle(MediaTitle title) {
+        Uri uri = UrlUtil.uri(url);
+        Uri newUri = uri.buildUpon().fragment("title=" + title.index).build();
+        url = newUri.toString();
+        setMediaItem();
+        seekTo(0);
+    }
+
     public String getKey() {
         return key != null ? key : url;
     }
@@ -256,6 +265,10 @@ public class Players implements Player.Listener, ParseCallback {
 
     public boolean haveTrack(int type) {
         return exoPlayer != null && TrackUtil.count(exoPlayer.getCurrentTracks(), type) > 0;
+    }
+
+    public boolean haveTitle() {
+        return exoPlayer != null && !exoPlayer.getCurrentMediaTitles().isEmpty();
     }
 
     public boolean haveDanmaku() {
@@ -408,7 +421,7 @@ public class Players implements Player.Listener, ParseCallback {
         releaseSession();
         removeTimeoutCheck();
         Server.get().setPlayer(null);
-        App.execute(() -> Source.get().stop());
+        Task.execute(() -> Source.get().stop());
     }
 
     private void releasePlayer() {
@@ -661,6 +674,11 @@ public class Players implements Player.Listener, ParseCallback {
         setTrack(Track.find(getKey()));
         PlayerEvent.track(tag);
         initTrack = true;
+    }
+
+    @Override
+    public void onMediaTitlesChanged(@NonNull List<MediaTitle> titles) {
+        PlayerEvent.title(tag);
     }
 
     @Override

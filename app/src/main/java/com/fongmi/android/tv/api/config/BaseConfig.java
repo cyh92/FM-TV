@@ -9,9 +9,15 @@ import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.utils.Notify;
+import com.fongmi.android.tv.utils.Task;
+import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.bean.Header;
 import com.github.catvod.bean.Proxy;
 import com.github.catvod.net.OkHttp;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import java.io.InterruptedIOException;
 import java.util.List;
@@ -27,7 +33,7 @@ abstract class BaseConfig {
     private final AtomicInteger taskId = new AtomicInteger(0);
 
     protected boolean sync;
-    protected Config config;
+    protected volatile Config config;
     private volatile Future<?> future;
 
     protected abstract String getTag();
@@ -64,7 +70,7 @@ abstract class BaseConfig {
     public void load(Callback callback) {
         int id = taskId.incrementAndGet();
         if (future != null && !future.isDone()) future.cancel(true);
-        future = App.submit(() -> loadConfig(id, config, callback));
+        future = Task.submit(() -> loadConfig(id, config, callback));
         callback.start();
     }
 
@@ -92,6 +98,28 @@ abstract class BaseConfig {
         if (e instanceof InterruptedException) return true;
         if (e instanceof InterruptedIOException) return true;
         return e.getCause() instanceof InterruptedIOException;
+    }
+
+    protected JsonArray fetchArray(JsonObject object, String key) {
+        if (!object.has(key)) return new JsonArray();
+        JsonElement element = object.get(key);
+        if (element.isJsonObject()) return new JsonArray();
+        if (element.isJsonPrimitive()) element = fetch(element.getAsString());
+        JsonArray result = new JsonArray();
+        for (JsonElement item : element.getAsJsonArray()) {
+            if (item.isJsonPrimitive()) result.addAll(fetch(item.getAsString()));
+            else if (item.isJsonObject()) result.add(item);
+        }
+        return result;
+    }
+
+    private JsonArray fetch(String url) {
+        try {
+            JsonElement parsed = JsonParser.parseString(OkHttp.string(UrlUtil.convert(url)));
+            return parsed.isJsonArray() ? parsed.getAsJsonArray() : new JsonArray();
+        } catch (Exception e) {
+            return new JsonArray();
+        }
     }
      protected void handleEmptyUrl(Config config, Callback callback) {
         if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));

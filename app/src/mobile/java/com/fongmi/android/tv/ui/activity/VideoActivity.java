@@ -85,6 +85,7 @@ import com.fongmi.android.tv.ui.dialog.EpisodeListDialog;
 import com.fongmi.android.tv.ui.dialog.InfoDialog;
 import com.fongmi.android.tv.ui.dialog.ReceiveDialog;
 import com.fongmi.android.tv.ui.dialog.SubtitleDialog;
+import com.fongmi.android.tv.ui.dialog.TitleDialog;
 import com.fongmi.android.tv.ui.dialog.TrackDialog;
 import com.fongmi.android.tv.utils.Clock;
 import com.fongmi.android.tv.utils.FileChooser;
@@ -93,6 +94,7 @@ import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PiP;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Sniffer;
+import com.fongmi.android.tv.utils.Task;
 import com.fongmi.android.tv.utils.Timer;
 import com.fongmi.android.tv.utils.Traffic;
 import com.fongmi.android.tv.utils.Util;
@@ -331,6 +333,7 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         mBinding.control.action.scale.setOnClickListener(view -> onScale());
         mBinding.control.action.speed.setOnClickListener(view -> onSpeed());
         mBinding.control.action.reset.setOnClickListener(view -> onReset());
+        mBinding.control.action.title.setOnClickListener(view -> onTitle());
         mBinding.control.action.player.setOnClickListener(view -> onChoose());
         mBinding.control.action.decode.setOnClickListener(view -> onDecode());
         mBinding.control.action.ending.setOnClickListener(view -> onEnding());
@@ -418,9 +421,9 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(SiteViewModel.class);
-        mViewModel.result.observeForever(mObserveDetail);
-        mViewModel.player.observeForever(mObservePlayer);
-        mViewModel.search.observeForever(mObserveSearch);
+        mViewModel.getResult().observeForever(mObserveDetail);
+        mViewModel.getPlayer().observeForever(mObservePlayer);
+        mViewModel.getSearch().observeForever(mObserveSearch);
     }
 
     private void checkId() {
@@ -754,6 +757,11 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         hideControl();
     }
 
+    private void onTitle() {
+        TitleDialog.create().player(mPlayers).show(this);
+        hideControl();
+    }
+
     private void onDanmaku() {
         DanmakuDialog.create().player(mPlayers).show(this);
         hideControl();
@@ -1069,12 +1077,12 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
     private void saveHistory() {
         if (mHistory == null || Setting.isIncognito()) return;
         if (mHistory.getPosition() > 0 && mHistory.getDuration() > 0) {
-            App.execute(() -> mHistory.merge().save());
+            Task.execute(() -> mHistory.merge().save());
         }
     }
 
     private void updateHistory(Episode item) {
-        mHistory.setPosition(item.equals(mHistory.getEpisode()) ? mHistory.getPosition() : C.TIME_UNSET);
+        mHistory.setPosition(item.matchesName(mHistory.getEpisode()) ? mHistory.getPosition() : C.TIME_UNSET);
         mHistory.setVodFlag(getFlag().getFlag());
         mHistory.setVodRemarks(item.getName());
         mHistory.setEpisodeUrl(item.getUrl());
@@ -1229,6 +1237,9 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
                 setTrackVisible();
                 mClock.setCallback(this);
                 break;
+            case PlayerEvent.TITLE:
+                setTitleVisible();
+                break;
             case PlayerEvent.SIZE:
                 changeHeight();
                 checkOrientation();
@@ -1283,10 +1294,15 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         if (mControlDialog != null && mControlDialog.isVisible()) mControlDialog.setTrackVisible();
     }
 
+    private void setTitleVisible() {
+        mBinding.control.action.title.setVisibility(mPlayers.haveTitle() ? View.VISIBLE : View.GONE);
+        if (mControlDialog != null && mControlDialog.isVisible()) mControlDialog.setTitleVisible();
+    }
+
     private void setMetadata() {
         String title = mHistory.getVodName();
         String episode = getEpisode().getName();
-        boolean empty = title.equals(episode) || episode == null;
+        boolean empty = episode.isEmpty() || title.equals(episode);
         String artist = empty ? "" : getString(R.string.play_now, episode);
         mPlayers.setMetadata(title, artist, mHistory.getVodPic());
     }
@@ -1688,9 +1704,9 @@ public class VideoActivity extends BaseActivity implements Clock.Callback, Custo
         RefreshEvent.history();
         PlaybackService.stop();
         App.removeCallbacks(mR1, mR2, mR3, mR4);
-        mViewModel.result.removeObserver(mObserveDetail);
-        mViewModel.player.removeObserver(mObservePlayer);
-        mViewModel.search.removeObserver(mObserveSearch);
+        mViewModel.getResult().removeObserver(mObserveDetail);
+        mViewModel.getPlayer().removeObserver(mObservePlayer);
+        mViewModel.getSearch().removeObserver(mObserveSearch);
         super.onDestroy();
     }
 }

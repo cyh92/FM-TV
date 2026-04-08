@@ -11,6 +11,7 @@ import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.impl.ParseCallback;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.ui.custom.CustomWebView;
+import com.fongmi.android.tv.utils.Task;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.fongmi.android.tv.utils.WebViewUtil;
 import com.github.catvod.net.OkHttp;
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Response;
@@ -40,15 +42,15 @@ public class ParseJob implements ParseCallback {
     private ParseCallback callback;
     private Parse parse;
 
-    public static ParseJob create(ParseCallback callback) {
-        return new ParseJob(callback);
-    }
-
     public ParseJob(ParseCallback callback) {
-        this.executor = Executors.newFixedThreadPool(2);
+        this.executor = Executors.newSingleThreadExecutor();
         this.infinite = Executors.newCachedThreadPool();
         this.webViews = new ArrayList<>();
         this.callback = callback;
+    }
+
+    public static ParseJob create(ParseCallback callback) {
+        return new ParseJob(callback);
     }
 
     public ParseJob start(Result result, boolean useParse) {
@@ -73,13 +75,10 @@ public class ParseJob implements ParseCallback {
     }
 
     private void execute(Result result) {
-        executor.execute(() -> {
-            try {
-                executor.submit(getTask(result)).get(Constant.TIMEOUT_PARSE_DEF, TimeUnit.MILLISECONDS);
-            } catch (Throwable e) {
-                onParseError();
-            }
-        });
+        Future<?> task = executor.submit(getTask(result));
+        Task.schedule(() -> {
+            if (task.cancel(true)) onParseError();
+        }, Constant.TIMEOUT_PARSE_DEF, TimeUnit.MILLISECONDS);
     }
 
     private Runnable getTask(Result result) {
@@ -94,20 +93,20 @@ public class ParseJob implements ParseCallback {
 
     private void doInBackground(String key, String webUrl, String flag) throws Throwable {
         switch (parse.getType()) {
-            case 0: //嗅探
+            case 0:
                 startWeb(key, parse, webUrl);
                 break;
-            case 1: //Json
+            case 1:
                 jsonParse(parse, webUrl, true);
                 break;
-            case 2: //Json擴展
+            case 2:
                 jsonExtend(webUrl);
                 break;
-            case 3: //Json聚合
+            case 3:
                 jsonMix(webUrl, flag);
                 break;
-            case 4: //超級解析
-                godParse(webUrl, flag);
+            case 4:
+                superParse(webUrl, flag);
                 break;
         }
     }
@@ -134,7 +133,7 @@ public class ParseJob implements ParseCallback {
         checkResult(Result.fromObject(BaseLoader.get().jsonExtMix(flag, parse.getUrl(), parse.getName(), jxs, webUrl)));
     }
 
-    private void godParse(String webUrl, String flag) throws Exception {
+    private void superParse(String webUrl, String flag) throws Exception {
         List<Parse> json = VodConfig.get().getParses(1, flag);
         List<Parse> webs = VodConfig.get().getParses(0, flag);
         int count = json.size() + (webs.isEmpty() ? 0 : 1);

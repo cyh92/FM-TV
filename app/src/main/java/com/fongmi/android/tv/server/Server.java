@@ -1,14 +1,14 @@
 package com.fongmi.android.tv.server;
 
-import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.player.Players;
+import com.fongmi.android.tv.utils.Task;
 import com.github.catvod.Proxy;
 import com.github.catvod.utils.Util;
 
 public class Server {
 
-    private Players player;
-    private Nano nano;
+    private volatile Players player;
+    private volatile Nano nano;
 
     private static class Loader {
         static volatile Server INSTANCE = new Server();
@@ -57,7 +57,7 @@ public class Server {
     }
 
     public void stop() {
-        App.execute(() -> {
+        Task.execute(() -> {
             if (nano != null) nano.stop();
             player = null;
             nano = null;

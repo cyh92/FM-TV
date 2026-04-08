@@ -250,10 +250,10 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(LiveViewModel.class);
-        mViewModel.url.observeForever(mObserveUrl);
-        mViewModel.xml.observe(this, this::setEpg);
-        mViewModel.epg.observeForever(mObserveEpg);
-        mViewModel.live.observe(this, live -> {
+        mViewModel.url().observeForever(mObserveUrl);
+        mViewModel.xml().observe(this, this::setEpg);
+        mViewModel.epg().observeForever(mObserveEpg);
+        mViewModel.live().observe(this, live -> {
             mViewModel.getXml(live);
             setGroup(live);
             setWidth(live);
@@ -485,8 +485,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void showEpg(Channel item) {
-        if (mChannel == null || mChannel.getData().getList().isEmpty() || mEpgDataAdapter.getItemCount() == 0 || !mChannel.equals(item) || !mChannel.getGroup().equals(mGroup)) return;
-        scrollToPosition(mBinding.epgData, item.getData().getSelected());
+        if (mChannel == null || mChannel.getData(mViewModel.getZoneId()).getList().isEmpty() || mEpgDataAdapter.getItemCount() == 0 || !mChannel.equals(item) || !mChannel.getGroup().equals(mGroup)) return;
+        scrollToPosition(mBinding.epgData, item.getData(mViewModel.getZoneId()).getSelected());
         mBinding.epgData.setVisibility(View.VISIBLE);
         mBinding.channel.setVisibility(View.GONE);
         mBinding.group.setVisibility(View.GONE);
@@ -605,7 +605,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
 
     @Override
     public void onItemClick(Channel item) {
-        if (!item.getData().getList().isEmpty() && item.isSelected() && mChannel != null && mChannel.equals(item) && mChannel.getGroup().equals(mGroup)) {
+        if (!item.getData(mViewModel.getZoneId()).getList().isEmpty() && item.isSelected() && mChannel != null && mChannel.equals(item) && mChannel.getGroup().equals(mGroup)) {
             showEpg(item);
         } else if (mGroup != null) {
             mGroup.setPosition(mChannelAdapter.setSelected(item.group(mGroup)));
@@ -632,7 +632,7 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     public void onItemClick(EpgData item) {
         if (item.isSelected()) {
             fetch(item);
-        } else if (mChannel.hasCatchup()) {
+        } else if (mChannel.hasCatchup() || mChannel.isRtsp()) {
             mBinding.control.title.setText(getString(R.string.detail_title, mChannel.getShow(), item.getTitle()));
             Notify.show(getString(R.string.play_ready, item.getTitle()));
             mEpgDataAdapter.setSelected(item);
@@ -671,23 +671,20 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         mBinding.control.action.line.setVisibility(mBinding.widget.line.getVisibility());
     }
 
-    private void setEpg() {
-        EpgData data = mChannel.getData().getEpgData();
+    private void setEpg(Epg epg) {
+        if (mChannel == null || !mChannel.getTvgId().equals(epg.getKey())) return;
+        EpgData data = epg.getEpgData();
         boolean hasTitle = !data.getTitle().isEmpty();
-        mEpgDataAdapter.addAll(mChannel.getData().getList());
+        mEpgDataAdapter.addAll(epg.getList());
         if (hasTitle) mBinding.control.title.setText(getString(R.string.detail_title, mChannel.getShow(), data.getTitle()));
         mBinding.widget.name.setMaxEms(hasTitle ? 12 : 48);
         mBinding.widget.play.setText(data.format());
-        setWidth(mChannel.getData());
+        setWidth(epg);
         setMetadata();
     }
 
     private void setEpg(boolean success) {
         if (mChannel != null && success) mViewModel.getEpg(mChannel);
-    }
-
-    private void setEpg(Epg epg) {
-        if (mChannel != null && mChannel.getTvgId().equals(epg.getKey())) setEpg();
     }
 
     private void fetch(EpgData item) {
@@ -1018,10 +1015,10 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
     }
 
     private void checkNext() {
-        int current = mChannel.getData().getInRange();
-        int position = mChannel.getData().getSelected() + 1;
+        int current = mChannel.getData(mViewModel.getZoneId()).getInRange();
+        int position = mChannel.getData(mViewModel.getZoneId()).getSelected() + 1;
         boolean hasNext = position <= current && position > 0;
-        if (hasNext) onItemClick(mChannel.getData().getList().get(position));
+        if (hasNext) onItemClick(mChannel.getData(mViewModel.getZoneId()).getList().get(position));
         else fetch();
     }
 
@@ -1263,8 +1260,8 @@ public class LiveActivity extends BaseActivity implements CustomKeyDown.Listener
         Source.get().exit();
         PlaybackService.stop();
         App.removeCallbacks(mR1, mR2, mR3);
-        mViewModel.url.removeObserver(mObserveUrl);
-        mViewModel.epg.removeObserver(mObserveEpg);
+        mViewModel.url().removeObserver(mObserveUrl);
+        mViewModel.epg().removeObserver(mObserveEpg);
         super.onDestroy();
     }
 }
