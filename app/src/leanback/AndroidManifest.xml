@@ -14,7 +14,15 @@
         android:required="false" />
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- 1. 开机自启动核心权限 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- 2. 机顶盒后台保活权限 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- 3. 安卓8.0+ 前台服务权限 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- 4. 安卓12+ 开机 JobService 权限 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application android:banner="@mipmap/ic_banner">
 
@@ -162,18 +170,41 @@
             android:name="com.android.cast.dlna.dmr.DLNARendererService"
             android:exported="false" />
 
+
+        <!-- 开机广播接收器（静态注册！盒子必须静态注册） -->
         <receiver
-            android:name=".receiver.BootReceiver"
-            android:exported="true"
-            android:priority="999">
+                android:name=".receiver.BootReceiver"
+                android:enabled="true"
+                android:exported="true">
             <intent-filter>
+                <!-- 开机完成广播 -->
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <!-- 机顶盒专属：部分盒子用这个广播 -->
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <!-- 安卓7.0+ 部分厂商 -->
+                <action android:name="com.android.launcher.action.INSTALL_SHORTCUT" />
+
+                <!-- 模拟器/盒子专用 -->
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.REBOOT" />
+                <!-- MuMu 模拟器专用 -->
+                <action android:name="com.android.boot.completed" />
             </intent-filter>
         </receiver>
-        <service android:name=".receiver.BootJobService"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-            android:exported="true"/>
+
+        <!-- 低版本开机服务 -->
+        <service
+                android:name=".service.BootStartService"
+                android:enabled="true"
+                android:exported="false" />
+
+        <!-- 高版本 JobService （安卓10+）-->
+        <service
+                android:name=".service.BootJobService"
+                android:permission="android.permission.BIND_JOB_SERVICE"
+                android:enabled="true"
+                android:exported="true" />
+
 
 
     </application>
